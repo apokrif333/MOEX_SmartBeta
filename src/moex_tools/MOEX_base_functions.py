@@ -1,8 +1,8 @@
-import requests
-import pandas as pd
-import apimoex
 import xml.etree.ElementTree as ET
 
+import apimoex
+import pandas as pd
+import requests
 
 # Settings
 pd.options.display.max_rows = 500

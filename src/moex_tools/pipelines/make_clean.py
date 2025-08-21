@@ -1,6 +1,6 @@
 from ..config import settings
-from ..sources.moex import *
 from ..sources.finance_marker import *
+from ..sources.moex import *
 
 
 def isin_stocks_for_parsing() -> dict:

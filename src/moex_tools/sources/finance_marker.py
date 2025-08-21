@@ -1,12 +1,12 @@
 from __future__ import annotations
-from moex_tools.config import settings
-from tqdm import tqdm
-from bs4 import BeautifulSoup
 
 import datetime
-import polars as pl
+
 import pandas as pd
+import polars as pl
 import requests
+from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 
 def finance_market_download_dividends(stocks_for_parsing: list) -> pd.DataFrame:
@@ -124,7 +124,7 @@ def fm_convert_usd_to_rub(fm_divs: pl.DataFrame) -> pl.DataFrame:
     ).collect()
 
     fm_divs = fm_divs.with_columns(
-        pl.col("size").str.replace("₽", "").str.replace("\$", "").alias("size")
+        pl.col("size").str.replace("₽", "").str.replace(r"\$", "").alias("size")
     )
     fm_divs = fm_divs.filter(~pl.col("size").str.contains("-")).with_columns(
         pl.col("size").str.replace(r" ", "").str.replace(r" ", "").cast(pl.Float32).alias("size")

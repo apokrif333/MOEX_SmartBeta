@@ -1,4 +1,5 @@
 import typer
+
 from moex_tools.pipelines.make_clean import run as make_clean_run
 
 app = typer.Typer(help="MOEX Tools CLI")

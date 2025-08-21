@@ -1,19 +1,24 @@
 from __future__ import annotations
-from tqdm import tqdm
-from moex_tools.config import settings
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from moex_tools.MOEX_base_functions import get_OHLC
-from moex_tools.MOEX_base_functions import get_exchange_total_info, get_company_description
 
-import json
-import re
-import urllib3
-import os
 import datetime
+import json
+import os
+import re
 import time
-import requests
-import polars as pl
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import pandas as pd
+import polars as pl
+import requests
+import urllib3
+from tqdm import tqdm
+
+from moex_tools.config import settings
+from moex_tools.MOEX_base_functions import (
+    get_company_description,
+    get_exchange_total_info,
+    get_OHLC,
+)
 
 
 def _clean_exchange_df(df: pl.DataFrame) -> pl.DataFrame:
