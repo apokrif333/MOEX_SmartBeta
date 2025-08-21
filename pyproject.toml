@@ -1,0 +1,23 @@
+[project]
+name = "moex-tools"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2.2",
+  "numpy>=1.26",
+  "typer>=0.12",
+  "pydantic-settings>=2.2",
+  "python-dotenv>=1.0",
+]
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+select = ["E","F","I","W","C90","UP","PL"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

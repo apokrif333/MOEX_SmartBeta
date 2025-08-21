@@ -1,0 +1,25 @@
+# Superfluous folders
+notebooks/
+.idea/
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Data files
+*.parquet
+*.csv
+*.json
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
