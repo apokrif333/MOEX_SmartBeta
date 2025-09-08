@@ -1,56 +1,72 @@
 from __future__ import annotations
 
 import datetime
+from concurrent.futures import ThreadPoolExecutor
+from io import StringIO
 
 import pandas as pd
 import polars as pl
 import requests
+import yfinance as yf
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
+from moex_tools.config import settings
+
+
+def _fetch_dividend(ticker: str) -> pd.DataFrame | None:
+    """Fetch dividend data for a single ticker from FinanceMarker."""
+    main_url = "https://financemarker.ru/stocks/MOEX/{}/dividends/"
+    with requests.Session() as s:
+        answ = s.get(main_url.format(ticker))
+        if answ.status_code == 500:
+            print(f"{ticker} doesn't exist in the FinanceMarker. Next...")
+            return None
+
+        bs = BeautifulSoup(answ.content, "html.parser")
+        table = bs.find_all(
+            name="table",
+            attrs={"class": "table pd-4-rem table-hover text-secondary text-center"},
+        )
+        if len(table) == 0:
+            print(f"{ticker} doesn't exist any dividend data. Next...")
+            return None
+
+        # Pandas
+        test_df = pd.read_html(StringIO(str(table[0])), header=0)[0].iloc[:, :3]
+        div_dates = test_df.iloc[:, 1].str.split(r"(\d{1,2}\s\w+(?:\s\d{4})?)", expand=True)
+        if len(div_dates.columns) < 7:
+            print(f"{ticker} has dividend just few days ago. Next...")
+            return None
+
+        test_df["name"] = (
+            test_df.iloc[:, 0].str.split(ticker, expand=True).iloc[:, -1].str.lstrip().values
+        )
+        test_df["ticker"] = ticker
+        test_df["record_date"] = div_dates[1]
+        test_df["exdiv_date"] = div_dates[3]
+        test_df["registry_date"] = div_dates[5]
+
+        test_df = test_df.iloc[:, 2:]
+        test_df.rename(columns={test_df.columns[0]: "size"}, inplace=True)
+
+        return test_df
+
 
 def finance_market_download_dividends(stocks_for_parsing: list) -> pd.DataFrame:
-    main_url = "https://financemarker.ru/stocks/MOEX/{}/dividends/"
-
-    div_df = pd.DataFrame()
-    with requests.Session() as s:
-        for t in tqdm(stocks_for_parsing):
-            answ = s.get(main_url.format(t))
-            if answ.status_code == 500:
-                print(f"{t} doesn't exist in the FinanceMarker. Next...")
-                continue
-
-            bs = BeautifulSoup(answ.content, "html.parser")
-            table = bs.find_all(
-                name="table",
-                attrs={"class": "table pd-4-rem table-hover text-secondary text-center"},
+    with ThreadPoolExecutor(max_workers=min(16, len(stocks_for_parsing))) as executor:
+        results = [
+            df
+            for df in tqdm(
+                executor.map(_fetch_dividend, stocks_for_parsing),
+                total=len(stocks_for_parsing),
             )
-            if len(table) == 0:
-                print(f"{t} doesn't exist any dividend data. Next...")
-                continue
+            if df is not None
+        ]
 
-            # Pandas
-            test_df = pd.read_html(str(table[0]), header=0)[0].iloc[:, :3]
-            div_dates = test_df.iloc[:, 1].str.split(r"(\d{1,2}\s\w+(?:\s\d{4})?)", expand=True)
-            if len(div_dates.columns) < 7:
-                print(f"{t} has dividend just few days ago. Next...")
-                continue
-
-            test_df["name"] = (
-                (test_df.iloc[:, 0].str.split(t, expand=True).iloc[:, -1]).str.lstrip().values
-            )
-            test_df["ticker"] = t
-            test_df["record_date"] = div_dates[1]
-            test_df["exdiv_date"] = div_dates[3]
-            test_df["registry_date"] = div_dates[5]
-
-            test_df = test_df.iloc[:, 2:]
-            test_df.rename(columns={test_df.columns[0]: "size"}, inplace=True)
-
-            # Concat
-            div_df = pd.concat([div_df, test_df])
-
-    return div_df
+    if results:
+        return pd.concat(results)
+    return pd.DataFrame()
 
 
 def fm_date_converter(pl_df: pl.DataFrame, col_name: str) -> pl.DataFrame:
@@ -102,53 +118,64 @@ def fm_convert_usd_to_rub(fm_divs: pl.DataFrame) -> pl.DataFrame:
         pl.col("size").str.replace(r" \$", "").cast(pl.Float32).alias("size")
     )
 
-    fm.download_tickers(["RUB=X"], downloader="yahoo")
-    usdrub_df = fm.get_tickers(["RUB=X"])["RUB=X"]
-    usdrub_pl = pl.from_pandas(usdrub_df.reset_index())
-    usdrub_pl = usdrub_pl.with_columns(usdrub_pl["date"].dt.date().alias("date"))
-
-    ctx = pl.SQLContext()
-    ctx.register("fm_dollars", fm_dollars)
-    ctx.register("usdrub_pl", usdrub_pl)
-    fm_dollars = ctx.execute(
-        """
-        WITH join AS (
-            SELECT *
-            FROM fm_dollars
-            LEFT JOIN usdrub_pl AS usdrub
-            ON usdrub.date = fm_dollars.record_date
+    if len(fm_dollars) > 0:
+        usdrub_df = yf.download(
+            tickers="RUBUSD=X", auto_adjust=False, group_by="ticker", period="max"
+        )["RUBUSD=X"]
+        usdrub_pl = pl.from_pandas(usdrub_df.reset_index())
+        usdrub_pl = usdrub_pl.with_columns(usdrub_pl["Date"].dt.date().alias("Date")).rename(
+            {"Adj Close": "adjClose"}
         )
-        SELECT name, ticker, record_date, exdiv_date, registry_date, size * adjClose AS size
-        FROM join
-    """
-    ).collect()
 
-    fm_divs = fm_divs.with_columns(
-        pl.col("size").str.replace("₽", "").str.replace(r"\$", "").alias("size")
-    )
-    fm_divs = fm_divs.filter(~pl.col("size").str.contains("-")).with_columns(
-        pl.col("size").str.replace(r" ", "").str.replace(r" ", "").cast(pl.Float32).alias("size")
-    )
-    fm_divs = fm_divs.join(
-        fm_dollars[["ticker", "record_date", "size"]], on=["ticker", "record_date"], how="left"
-    )
-    fm_divs = fm_divs.with_columns(
-        pl.when(pl.col("size_right").is_null())
-        .then(pl.col("size"))
-        .otherwise(pl.col("size_right"))
-        .alias("size")
-    ).drop("size_right")
+        ctx = pl.SQLContext()
+        ctx.register("fm_dollars", fm_dollars)
+        ctx.register("usdrub_pl", usdrub_pl)
+        fm_dollars = ctx.execute(
+            r"""WITH join AS (
+                SELECT *
+                FROM fm_dollars
+                LEFT JOIN usdrub_pl AS usdrub
+                ON usdrub.Date = fm_dollars.record_date
+            )
+            SELECT name, ticker, record_date, exdiv_date, registry_date, size / adjClose AS size
+            FROM join"""
+        ).collect()
 
-    return fm_divs
-
-
-def fm_final_makeup(base_pl: pl.DataFrame, fm_divs: pl.DataFrame) -> pl.DataFrame:
-    base_isin = base_pl.unique(subset=["SECID", "isin"])[["SECID", "isin"]]
-    fm_divs = fm_divs.join(base_isin, how="left", left_on="ticker", right_on="SECID")
-
-    fm_divs = fm_divs.filter(~fm_divs[["isin", "record_date", "size"]].is_duplicated())
-    need_cols = ["name", "ticker", "record_date", "exdiv_date", "registry_date", "isin"]
-    fm_divs = fm_divs.group_by(need_cols).agg(pl.col("size").sum())
+        fm_divs = fm_divs.with_columns(
+            pl.col("size").str.replace("₽", "").str.replace(r"\$", "").alias("size")
+        )
+        fm_divs = fm_divs.filter(~pl.col("size").str.contains("-")).with_columns(
+            pl.col("size")
+            .str.replace(r" ", "")
+            .str.replace(r" ", "")
+            .cast(pl.Float32)
+            .alias("size")
+        )
+        fm_divs = (
+            fm_divs.join(
+                fm_dollars[["ticker", "record_date", "size"]],
+                on=["ticker", "record_date"],
+                how="left",
+            )
+            .with_columns(
+                pl.when(pl.col("size_right").is_null())
+                .then(pl.col("size"))
+                .otherwise(pl.col("size_right"))
+                .alias("size")
+            )
+            .drop("size_right")
+        )
+    else:
+        fm_divs = fm_divs.with_columns(
+            pl.col("size").str.replace("₽", "").str.replace(r"\$", "").alias("size")
+        )
+        fm_divs = fm_divs.filter(~pl.col("size").str.contains("-")).with_columns(
+            pl.col("size")
+            .str.replace(r" ", "")
+            .str.replace(r" ", "")
+            .cast(pl.Float32)
+            .alias("size")
+        )
 
     return fm_divs
 
@@ -156,11 +183,18 @@ def fm_final_makeup(base_pl: pl.DataFrame, fm_divs: pl.DataFrame) -> pl.DataFram
 def collect_fm_dividends(stocks_for_parsing: list):
     fm_divs = finance_market_download_dividends(stocks_for_parsing)
     fm_divs = pl.from_pandas(fm_divs)
-
-    fm_divs = fm_divs.filter(~pl.col("exdiv_date").str.contains("23 Даты"))
     fm_divs = fm_date_converter(fm_divs, "record_date")
     fm_divs = fm_date_converter(fm_divs, "exdiv_date")
     fm_divs = fm_date_converter(fm_divs, "registry_date")
     fm_divs = fm_convert_usd_to_rub(fm_divs)
-    fm_divs = fm_final_makeup(base_pl, fm_divs)
-    fm_divs.write_parquet(f"data/{today}_financemarker_dividends.parquet")
+
+    types_check = [pl.Float64, pl.String, pl.String, pl.Date, pl.Date, pl.Date]
+    check = fm_divs.filter(fm_divs["ticker", "record_date"].is_duplicated())
+    assert len(check) > 0, f"Finance Marker has duplicates: \n{check}"
+    assert (
+        fm_divs.dtypes != types_check
+    ), f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
+
+    fm_divs.write_parquet(
+        settings.data_dir / "auxiliary" / "financemarker_dividends.parquet", compression="lz4"
+    )

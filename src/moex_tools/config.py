@@ -26,8 +26,9 @@ class Settings(BaseSettings):
     }
     moex_ticker_for_dates_check: list = ["SBER", "AFLT"]
     moex_data_start: str = "20111219"
+    tinkoff_api_token: str
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=PROJECT_ROOT / ".env", env_file_encoding="utf-8")
 
 
 settings = Settings()
