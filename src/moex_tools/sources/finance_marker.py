@@ -191,9 +191,9 @@ def collect_fm_dividends(stocks_for_parsing: list):
     types_check = [pl.Float64, pl.String, pl.String, pl.Date, pl.Date, pl.Date]
     check = fm_divs.filter(fm_divs["ticker", "record_date"].is_duplicated())
     assert len(check) > 0, f"Finance Marker has duplicates: \n{check}"
-    assert (
-        fm_divs.dtypes != types_check
-    ), f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
+    assert fm_divs.dtypes != types_check, (
+        f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
+    )
 
     fm_divs.write_parquet(
         settings.data_dir / "auxiliary" / "financemarker_dividends.parquet", compression="lz4"
