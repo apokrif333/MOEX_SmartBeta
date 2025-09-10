@@ -57,10 +57,8 @@ def finance_market_download_dividends(stocks_for_parsing: list) -> pd.DataFrame:
     with ThreadPoolExecutor(max_workers=min(16, len(stocks_for_parsing))) as executor:
         results = [
             df
-            for df in tqdm(
-                executor.map(_fetch_dividend, stocks_for_parsing),
-                total=len(stocks_for_parsing),
-            )
+            for df in tqdm(executor.map(_fetch_dividend, stocks_for_parsing), total=len(stocks_for_parsing),
+                           desc="Fetching dividends from Finance Market")
             if df is not None
         ]
 

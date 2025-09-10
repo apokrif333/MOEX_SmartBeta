@@ -34,7 +34,7 @@ def tink_get_figi(isin_for_parsing: list) -> pl.DataFrame:
         tink_figi = {"isin": [], "figi": [], "ticker": [], "class_code": []}
         count = 0
         with Client(settings.tinkoff_api_token) as client:
-            for isin in tqdm(isins_for_parsing):
+            for isin in tqdm(isins_for_parsing, desc="Fetching FIGI from Tinkoff"):
                 answ = client.instruments.find_instrument(query=isin)
                 for i in answ.instruments:
                     tink_figi["isin"].append(i.isin)
