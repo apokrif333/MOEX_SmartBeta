@@ -1,9 +1,10 @@
 import polars as pl
 
 from ..config import settings
-from ..sources.divs_finance_marker import collect_fm_dividends
 from ..sources.moex import *
+from ..sources.divs_finance_marker import collect_fm_dividends
 from ..sources.divs_tinkoff import collect_tink_dividends
+from ..sources.divs_bcs import collect_bcs_dividends
 
 
 def isin_stocks_for_parsing() -> dict:
@@ -56,3 +57,4 @@ def run() -> None:
     for_parsing = isin_stocks_for_parsing()
     # collect_fm_dividends(for_parsing["stocks"])
     # collect_tink_dividends(for_parsing["isin"])
+    collect_bcs_dividends(for_parsing["isin"])

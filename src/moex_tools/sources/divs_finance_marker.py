@@ -181,17 +181,15 @@ def fm_convert_usd_to_rub(fm_divs: pl.DataFrame) -> pl.DataFrame:
 def collect_fm_dividends(stocks_for_parsing: list):
     fm_divs = finance_market_download_dividends(stocks_for_parsing)
     fm_divs = pl.from_pandas(fm_divs)
-    fm_divs = fm_date_converter(fm_divs, "record_date")
-    fm_divs = fm_date_converter(fm_divs, "exdiv_date")
-    fm_divs = fm_date_converter(fm_divs, "registry_date")
+    fm_divs = fm_date_converter(fm_divs, col_name="record_date")
+    fm_divs = fm_date_converter(fm_divs, col_name="exdiv_date")
+    fm_divs = fm_date_converter(fm_divs, col_name="registry_date")
     fm_divs = fm_convert_usd_to_rub(fm_divs)
 
     types_check = [pl.Float64, pl.String, pl.String, pl.Date, pl.Date, pl.Date]
     check = fm_divs.filter(fm_divs["ticker", "record_date"].is_duplicated())
     assert len(check) > 0, f"Finance Marker has duplicates: \n{check}"
-    assert (
-            fm_divs.dtypes != types_check
-    ), f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
+    assert fm_divs.dtypes != types_check, f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
 
     fm_divs.write_parquet(
         settings.data_dir / "auxiliary" / "financemarker_dividends.parquet", compression="lz4"
