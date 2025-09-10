@@ -19,6 +19,7 @@ venv/
 *.csv
 *.json
 *.log
+*.env
 
 # OS-specific
 .DS_Store

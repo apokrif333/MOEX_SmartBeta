@@ -1,12 +1,22 @@
 import polars as pl
 
 from ..config import settings
-from ..sources.finance_marker import collect_fm_dividends
+from ..sources.divs_finance_marker import collect_fm_dividends
 from ..sources.moex import *
-from ..sources.tinkoff_divs import collect_tink_dividends
+from ..sources.divs_tinkoff import collect_tink_dividends
 
 
 def isin_stocks_for_parsing() -> dict:
+    """
+    Extract unique ISIN codes and stock tickers from MOEX stock data.
+    Filters out RM and RX class stocks and returns dictionary containing
+    lists of unique ISIN codes and stock tickers for further parsing.
+
+    Returns:
+        dict: Dictionary containing two keys:
+            - 'isin': List of unique ISIN codes
+            - 'stocks': List of unique stock tickers (SECID without RM/RX suffix)
+    """
     path = settings.data_dir / "raw" / "union_raw_moex_descript.parquet"
     base_pl = pl.read_parquet(path)
 
@@ -44,5 +54,5 @@ def run() -> None:
 
     # Dividends
     for_parsing = isin_stocks_for_parsing()
-    collect_fm_dividends(for_parsing["stocks"])
-    collect_tink_dividends(for_parsing["isin"])
+    # collect_fm_dividends(for_parsing["stocks"])
+    # collect_tink_dividends(for_parsing["isin"])

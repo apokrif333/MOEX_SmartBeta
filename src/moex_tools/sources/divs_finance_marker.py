@@ -131,14 +131,12 @@ def fm_convert_usd_to_rub(fm_divs: pl.DataFrame) -> pl.DataFrame:
         ctx.register("fm_dollars", fm_dollars)
         ctx.register("usdrub_pl", usdrub_pl)
         fm_dollars = ctx.execute(
-            r"""WITH join AS (
-                SELECT *
-                FROM fm_dollars
-                LEFT JOIN usdrub_pl AS usdrub
-                ON usdrub.Date = fm_dollars.record_date
-            )
-            SELECT name, ticker, record_date, exdiv_date, registry_date, size / adjClose AS size
-            FROM join"""
+            r"""WITH join AS (SELECT *
+                              FROM fm_dollars
+                                       LEFT JOIN usdrub_pl AS usdrub
+                                                 ON usdrub.Date = fm_dollars.record_date)
+                SELECT name, ticker, record_date, exdiv_date, registry_date, size / adjClose AS size
+                FROM join"""
         ).collect()
 
         fm_divs = fm_divs.with_columns(
@@ -191,9 +189,9 @@ def collect_fm_dividends(stocks_for_parsing: list):
     types_check = [pl.Float64, pl.String, pl.String, pl.Date, pl.Date, pl.Date]
     check = fm_divs.filter(fm_divs["ticker", "record_date"].is_duplicated())
     assert len(check) > 0, f"Finance Marker has duplicates: \n{check}"
-    assert fm_divs.dtypes != types_check, (
-        f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
-    )
+    assert (
+            fm_divs.dtypes != types_check
+    ), f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
 
     fm_divs.write_parquet(
         settings.data_dir / "auxiliary" / "financemarker_dividends.parquet", compression="lz4"
