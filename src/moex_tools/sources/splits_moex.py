@@ -1,5 +1,4 @@
 import polars as pl
-from typing import List, Tuple
 
 from moex_tools.config import settings
 
@@ -24,12 +23,10 @@ def detect_splits(df: pl.DataFrame):
     if missing:
         raise ValueError(f"DataFrame is missing required columns: {missing}")
 
-    df = df.sort(["SECID", "DATE"]).with_columns(
-        [
-            pl.col(c).shift(1).over("SECID").alias(f"prev_{c}")
-            for c in ["OPEN", "HIGH", "LOW", "CLOSE", "ISSUESIZE", "BOARDID", "CURRENCYID"]
-        ]
-    )
+    df = df.sort(["SECID", "DATE"]).with_columns([
+        pl.col(c).shift(1).over("SECID").alias(f"prev_{c}")
+        for c in ["OPEN", "HIGH", "LOW", "CLOSE", "ISSUESIZE", "BOARDID", "CURRENCYID"]
+    ])
 
     valid = (
         (pl.col("CLOSE") > 0)
@@ -48,75 +45,46 @@ def detect_splits(df: pl.DataFrame):
     )
     df = df.filter(valid)
 
+    df = df.with_columns([
+        (pl.col("prev_OPEN") / pl.col("OPEN")).alias("rO"),
+        (pl.col("prev_HIGH") / pl.col("HIGH")).alias("rH"),
+        (pl.col("prev_LOW") / pl.col("LOW")).alias("rL"),
+        (pl.col("prev_CLOSE") / pl.col("CLOSE")).alias("rC"),
+        (pl.col("ISSUESIZE") / pl.col("prev_ISSUESIZE")).alias("rI"),
+        (pl.col("prev_ISSUESIZE") / pl.col("ISSUESIZE")).alias("rI_rev"),
+    ])
+    df = df.with_columns([
+        (abs(pl.col("rO") / pl.col("rI") - 1.0)).alias("errO"),
+        (abs(pl.col("rH") / pl.col("rI") - 1.0)).alias("errH"),
+        (abs(pl.col("rL") / pl.col("rI") - 1.0)).alias("errL"),
+        (abs(pl.col("rC") / pl.col("rI") - 1.0)).alias("errC"),
+    ])
     df = df.with_columns(
-        [
-            (pl.col("prev_OPEN") / pl.col("OPEN")).alias("rO"),
-            (pl.col("prev_HIGH") / pl.col("HIGH")).alias("rH"),
-            (pl.col("prev_LOW") / pl.col("LOW")).alias("rL"),
-            (pl.col("prev_CLOSE") / pl.col("CLOSE")).alias("rC"),
-            (pl.col("ISSUESIZE") / pl.col("prev_ISSUESIZE")).alias("rI"),
-            (pl.col("prev_ISSUESIZE") / pl.col("ISSUESIZE")).alias("rI_rev"),
-        ]
-    )
-    df = df.with_columns(
-        [
-            (abs(pl.col("rO") / pl.col("rI") - 1.0)).alias("errO"),
-            (abs(pl.col("rH") / pl.col("rI") - 1.0)).alias("errH"),
-            (abs(pl.col("rL") / pl.col("rI") - 1.0)).alias("errL"),
-            (abs(pl.col("rC") / pl.col("rI") - 1.0)).alias("errC"),
-        ]
-    )
-    df = df.with_columns(
-        ((pl.col("errO") + pl.col("errH") + pl.col("errL") + pl.col("errC")) / 4.0).alias(
-            "err_ohlc_mean"
-        )
+        ((pl.col("errO") + pl.col("errH") + pl.col("errL") + pl.col("errC")) / 4.0).alias("err_ohlc_mean")
     ).drop(["errO", "errH", "errL", "errC"])
 
-    splits = (
-        df.filter(
-            ((pl.col("rI") > 1.1) | (pl.col("rI_rev") > 1.1)) & (pl.col("err_ohlc_mean") < 0.3)
+    splits = df.filter(
+            ((pl.col("rI") > 1.1) | (pl.col("rI_rev") > 1.1)) &
+            (pl.col("err_ohlc_mean") < 0.3)
+        ).with_columns([
+            pl.col("rI").cast(pl.Int64).alias("rI_int"),
+            pl.col("rI_rev").cast(pl.Int64).alias("rI_rev_int"),
+        ]).with_columns([
+            pl.when(pl.col("rI_int") != 0)
+            .then(pl.col("rI") % pl.col("rI_int"))
+            .otherwise(pl.col("rI"))
+            .alias("rI_frac"),
+            pl.when(pl.col("rI_rev_int") != 0)
+            .then(pl.col("rI_rev") % pl.col("rI_rev_int"))
+            .otherwise(pl.col("rI_rev"))
+            .alias("rI_rev_frac"),
+        ]).filter(
+            (pl.col("rI") / pl.col("rI_int")).is_close(1) | (pl.col("rI_rev") / pl.col("rI_rev_int")).is_close(1) |
+            ((pl.col("rI_frac") % 0.01) < 1e-12) | ((pl.col("rI_rev_frac") % 0.01) < 1e-12)
         )
-        .with_columns(
-            [
-                pl.col("rI").cast(pl.Int64).alias("rI_int"),
-                pl.col("rI_rev").cast(pl.Int64).alias("rI_rev_int"),
-            ]
-        )
-        .with_columns(
-            [
-                pl.when(pl.col("rI_int") != 0)
-                .then(pl.col("rI") % pl.col("rI_int"))
-                .otherwise(pl.col("rI"))
-                .alias("rI_frac"),
-                pl.when(pl.col("rI_rev_int") != 0)
-                .then(pl.col("rI_rev") % pl.col("rI_rev_int"))
-                .otherwise(pl.col("rI_rev"))
-                .alias("rI_rev_frac"),
-            ]
-        )
-        .filter(
-            (
-                (pl.col("rI") / pl.col("rI_int")).is_close(1)
-                | (pl.col("rI_rev") / pl.col("rI_rev_int")).is_close(1)
-                | ((pl.col("rI_frac") % 0.01) < 1e-12)
-                | ((pl.col("rI_rev_frac") % 0.01) < 1e-12)
-            )
-        )
-    )
 
-    splits = splits[
-        "SECID",
-        "DATE",
-        "CLOSE",
-        "prev_CLOSE",
-        "err_ohlc_mean",
-        "rI",
-        "rI_rev",
-        "rI_frac",
-        "rI_rev_frac",
-        "ISSUESIZE",
-        "prev_ISSUESIZE",
-    ]
+    splits = splits["SECID", "DATE", "CLOSE", "prev_CLOSE", "err_ohlc_mean", "rI", "rI_rev", "rI_frac", "rI_rev_frac",
+                    "ISSUESIZE", "prev_ISSUESIZE"]
     splits.write_parquet(settings.data_dir / "auxiliary" / "splits_moex.parquet")
 
 
@@ -130,3 +98,42 @@ def create_split_base():
     )
 
     detect_splits(base_pl)
+
+
+def create_split_adjusted_ohlc():
+    """
+    Creates a split-adjusted OHLC (Open, High, Low, Close) dataset by combining raw data
+    with stock split adjustments. The function reads a base dataset and a corresponding
+    splits dataset, calculates adjusted factors for OHLC prices based on split data, and
+    writes the split-adjusted dataset to an output file.
+
+    :raises FileNotFoundError: If the specified input files do not exist.
+    :raises IOError: If there is an I/O issue while reading or writing files.
+
+    :return: None
+    """
+    base_path = settings.data_dir / "raw" / "union_raw_moex_descript.parquet"
+    splits_path = settings.data_dir / "auxiliary" / "splits_moex.parquet"
+    out_path = settings.data_dir / "intermediate" / "union_raw_moex_descript_split.parquet"
+
+    base = (
+        pl.read_parquet(base_path)
+        .with_columns(pl.col("DATE").cast(pl.Date))
+    )
+    splits = (
+        pl.read_parquet(splits_path)
+        .with_columns(pl.col("DATE").cast(pl.Date))
+        .rename({'rI': 'split'})
+    )
+
+    base = (
+        base.join(splits["SECID", "DATE", 'split'], on=["SECID", "DATE"], how="left")
+        .sort(["SECID", "DATE"])
+        .with_columns(split=1 / pl.col("split").fill_null(1.0))
+        .with_columns(adj_factor=pl.col('split').shift(-1, fill_value=1).cum_prod(reverse=True).over('SECID'))
+    )
+
+    adj_exprs = [(pl.col(c) * pl.col("adj_factor")).alias(f"{c}_adj") for c in ["OPEN", "HIGH", "LOW", "CLOSE"]]
+    base = base.with_columns(adj_exprs)
+
+    base.write_parquet(out_path)
