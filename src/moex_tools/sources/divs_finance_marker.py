@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import time
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 
@@ -8,6 +9,7 @@ import pandas as pd
 import polars as pl
 import requests
 import yfinance as yf
+from anyio import sleep
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
@@ -18,10 +20,17 @@ def _fetch_dividend(ticker: str) -> pd.DataFrame | None:
     """Fetch dividend data for a single ticker from FinanceMarker."""
     main_url = "https://financemarker.ru/stocks/MOEX/{}/dividends/"
     with requests.Session() as s:
-        answ = s.get(main_url.format(ticker))
-        if answ.status_code == 500:
-            print(f"{ticker} doesn't exist in the FinanceMarker. Next...")
-            return None
+        attempt = 0
+        while True:
+            answ = s.get(main_url.format(ticker), timeout=10)
+            if answ.status_code == 500:
+                attempt += 1
+                if attempt > 5:
+                    print(f"{ticker} error 500")
+                    return None
+                time.sleep(1 * attempt)
+            else:
+                break
 
         bs = BeautifulSoup(answ.content, "html.parser")
         table = bs.find_all(
@@ -54,7 +63,7 @@ def _fetch_dividend(ticker: str) -> pd.DataFrame | None:
 
 
 def finance_market_download_dividends(stocks_for_parsing: list) -> pd.DataFrame:
-    with ThreadPoolExecutor(max_workers=min(16, len(stocks_for_parsing))) as executor:
+    with ThreadPoolExecutor(max_workers=min(10, len(stocks_for_parsing))) as executor:
         results = [
             df
             for df in tqdm(executor.map(_fetch_dividend, stocks_for_parsing), total=len(stocks_for_parsing),
@@ -111,67 +120,48 @@ def fm_date_converter(pl_df: pl.DataFrame, col_name: str) -> pl.DataFrame:
     return pl_df
 
 
-def fm_convert_usd_to_rub(fm_divs: pl.DataFrame) -> pl.DataFrame:
-    fm_dollars = fm_divs.filter(~pl.col("size").str.contains("₽")).with_columns(
-        pl.col("size").str.replace(r" \$", "").cast(pl.Float32).alias("size")
+def fm_currecy_convert(fm_divs: pl.DataFrame) -> pl.DataFrame:
+    fm_divs = (
+        fm_divs.with_columns([
+            pl.col('exdiv_date').cast(pl.Date),
+            pl.when(pl.col("size").str.contains("\$")).then(pl.lit('USD'))
+            .when(pl.col("size").str.contains("€")).then(pl.lit('EUR'))
+            .when(pl.col("size").str.contains("₽")).then(pl.lit('RUB'))
+            .otherwise(None)
+            .alias("currency"),
+            pl.col("size").str.replace(r" ", "")
+            .str.extract(r"([\d.]+)")
+            .cast(pl.Float32)
+            .alias("size"),
+        ])
     )
+    check = fm_divs.filter(pl.col("currency").is_null())
+    assert len(check) == 0, f"Finance Marker has inappropriate currency: \n{check}"
 
-    if len(fm_dollars) > 0:
-        usdrub_df = yf.download(
-            tickers="RUBUSD=X", auto_adjust=False, group_by="ticker", period="max"
-        )["RUBUSD=X"]
-        usdrub_pl = pl.from_pandas(usdrub_df.reset_index())
-        usdrub_pl = usdrub_pl.with_columns(usdrub_pl["Date"].dt.date().alias("Date")).rename(
-            {"Adj Close": "adjClose"}
-        )
+    currecy_for_load = set(fm_divs['currency'].unique()) - set(['RUB'])
+    currecy_for_load = [f'{c}RUB=X' for c in currecy_for_load]
 
-        ctx = pl.SQLContext()
-        ctx.register("fm_dollars", fm_dollars)
-        ctx.register("usdrub_pl", usdrub_pl)
-        fm_dollars = ctx.execute(
-            r"""WITH join AS (SELECT *
-                              FROM fm_dollars
-                                       LEFT JOIN usdrub_pl AS usdrub
-                                                 ON usdrub.Date = fm_dollars.record_date)
-                SELECT name, ticker, record_date, exdiv_date, registry_date, size / adjClose AS size
-                FROM join"""
-        ).collect()
+    if currecy_for_load:
+        currency_df = yf.download(
+            tickers=currecy_for_load, auto_adjust=False, group_by="ticker", period="max"
+        )
+        currency_df.columns = [f"{c[0]}_{c[1]}" for c in currency_df.columns]
+        cls_cols = [c for c in currency_df.columns if c.endswith('_Close')]
+        currency_df = pl.from_pandas(currency_df[cls_cols].reset_index()).with_columns(pl.col('Date').dt.date())
 
-        fm_divs = fm_divs.with_columns(
-            pl.col("size").str.replace("₽", "").str.replace(r"\$", "").alias("size")
-        )
-        fm_divs = fm_divs.filter(~pl.col("size").str.contains("-")).with_columns(
-            pl.col("size")
-            .str.replace(r" ", "")
-            .str.replace(r" ", "")
-            .cast(pl.Float32)
-            .alias("size")
-        )
-        fm_divs = (
-            fm_divs.join(
-                fm_dollars[["ticker", "record_date", "size"]],
-                on=["ticker", "record_date"],
-                how="left",
+        fm_divs = fm_divs.join(currency_df, left_on="exdiv_date", right_on='Date', how="left")
+        for c in currecy_for_load:
+            short_c = c.replace('RUB=X', '')
+            fm_divs = (
+                fm_divs.with_columns(
+                    pl.when(pl.col("currency") == short_c)
+                    .then(pl.col('size') * pl.col(f'{c}_Close'))
+                    .otherwise(pl.col('size'))
+                    .alias('size')
+                ).drop(f'{c}_Close')
             )
-            .with_columns(
-                pl.when(pl.col("size_right").is_null())
-                .then(pl.col("size"))
-                .otherwise(pl.col("size_right"))
-                .alias("size")
-            )
-            .drop("size_right")
-        )
-    else:
-        fm_divs = fm_divs.with_columns(
-            pl.col("size").str.replace("₽", "").str.replace(r"\$", "").alias("size")
-        )
-        fm_divs = fm_divs.filter(~pl.col("size").str.contains("-")).with_columns(
-            pl.col("size")
-            .str.replace(r" ", "")
-            .str.replace(r" ", "")
-            .cast(pl.Float32)
-            .alias("size")
-        )
+
+    fm_divs = fm_divs.drop('currency')
 
     return fm_divs
 
@@ -182,12 +172,10 @@ def collect_fm_dividends(stocks_for_parsing: list):
     fm_divs = fm_date_converter(fm_divs, col_name="record_date")
     fm_divs = fm_date_converter(fm_divs, col_name="exdiv_date")
     fm_divs = fm_date_converter(fm_divs, col_name="registry_date")
-    fm_divs = fm_convert_usd_to_rub(fm_divs)
+    fm_divs = fm_currecy_convert(fm_divs)
 
-    types_check = [pl.Float64, pl.String, pl.String, pl.Date, pl.Date, pl.Date]
     check = fm_divs.filter(fm_divs["ticker", "record_date"].is_duplicated())
     assert len(check) > 0, f"Finance Marker has duplicates: \n{check}"
-    assert fm_divs.dtypes != types_check, f"Finance Marker has inappropriate dtypes.\n {fm_divs.dtypes} {types_check}"
 
     fm_divs.write_parquet(
         settings.data_dir / "auxiliary" / "financemarker_dividends.parquet", compression="lz4"

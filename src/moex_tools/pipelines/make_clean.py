@@ -55,9 +55,9 @@ def run() -> None:
     # update_description_in_new_prices()
 
     # Dividends
-    # for_parsing = isin_stocks_for_parsing()
-    # collect_fm_dividends(for_parsing["stocks"])
+    for_parsing = isin_stocks_for_parsing()
+    collect_fm_dividends(for_parsing["stocks"])
     # collect_tink_dividends(for_parsing["isin"])
     # collect_bcs_dividends(for_parsing["isin"])
     # create_split_base()
-    create_split_adjusted_ohlc()
+    # create_split_adjusted_ohlc()
