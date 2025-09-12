@@ -126,24 +126,24 @@ def tink_filtration(tink_figi_pl: pl.DataFrame, tink_divs_pl: pl.DataFrame):
     :param tink_divs_pl: Polars DataFrame containing raw dividend information
     :return: None
     """
-    tink_divs_pl = tink_divs_pl.filter(
-        (tink_divs_pl["currency"] != "usd")
-        & ((tink_divs_pl["cls_units"] != 0) | (tink_divs_pl["cls_nano"] != 0))
-        & ((tink_divs_pl["div_units"] != 0) | (tink_divs_pl["div_nano"] != 0))
-    ).join(tink_figi_pl, on="figi", how="left")
-
-    tink_divs_pl = tink_divs_pl.filter(tink_divs_pl["class_code"] == "TQBR").sort(
-        ["ticker", "last_buy_date"]
+    tink_divs_pl = (
+        tink_divs_pl.filter(
+            (tink_divs_pl["currency"] != "usd")
+            & ((tink_divs_pl["cls_units"] != 0) | (tink_divs_pl["cls_nano"] != 0))
+            & ((tink_divs_pl["div_units"] != 0) | (tink_divs_pl["div_nano"] != 0))
+        ).join(
+            tink_figi_pl, on="figi", how="left"
+        )
     )
+
+    tink_divs_pl = tink_divs_pl.filter(tink_divs_pl["class_code"] == "TQBR").sort(["ticker", "last_buy_date"])
 
     tink_divs_pl = tink_divs_pl.with_columns(
         (pl.col("div_units") + pl.col("div_nano") / int("1" + "0" * 9)).alias("correct_divs"),
         (pl.col("cls_units") + pl.col("cls_nano") / int("1" + "0" * 9)).alias("ex_div_cls"),
     ).drop(["div_units", "div_nano", "cls_units", "cls_nano"])
 
-    tink_divs_pl = tink_divs_pl.group_by(tink_divs_pl.drop("correct_divs").columns).agg(
-        pl.col("correct_divs").sum()
-    )
+    tink_divs_pl = tink_divs_pl.group_by(tink_divs_pl.drop("correct_divs").columns).agg(pl.col("correct_divs").sum())
 
     tink_divs_pl.write_parquet(settings.data_dir / "auxiliary" / "tinkoff_divs_filtered.parquet")
 

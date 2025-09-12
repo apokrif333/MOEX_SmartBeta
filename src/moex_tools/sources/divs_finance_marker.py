@@ -63,7 +63,7 @@ def _fetch_dividend(ticker: str) -> pd.DataFrame | None:
 
 
 def finance_market_download_dividends(stocks_for_parsing: list) -> pd.DataFrame:
-    with ThreadPoolExecutor(max_workers=min(10, len(stocks_for_parsing))) as executor:
+    with ThreadPoolExecutor(max_workers=min(6, len(stocks_for_parsing))) as executor:
         results = [
             df
             for df in tqdm(executor.map(_fetch_dividend, stocks_for_parsing), total=len(stocks_for_parsing),
@@ -177,6 +177,7 @@ def collect_fm_dividends(stocks_for_parsing: list):
     check = fm_divs.filter(fm_divs["ticker", "record_date"].is_duplicated())
     assert len(check) > 0, f"Finance Marker has duplicates: \n{check}"
 
+    fm_divs = fm_divs.group_by(fm_divs.drop(["name", 'size']).columns).agg(pl.col('size').sum())
     fm_divs.write_parquet(
         settings.data_dir / "auxiliary" / "financemarker_dividends.parquet", compression="lz4"
     )
