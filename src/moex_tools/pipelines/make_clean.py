@@ -6,6 +6,7 @@ from ..sources.divs_finance_marker import collect_fm_dividends
 from ..sources.divs_tinkoff import collect_tink_dividends
 from ..sources.divs_bcs import collect_bcs_dividends
 from ..sources.splits_moex import create_split_base, create_split_adjusted_ohlc
+from ..sources.divs_to_adj import run_divs_to_adj
 
 
 def isin_stocks_for_parsing() -> dict:
@@ -54,10 +55,11 @@ def run() -> None:
     # create_description_json()
     # update_description_in_new_prices()
 
-    # Dividends
-    for_parsing = isin_stocks_for_parsing()
-    collect_fm_dividends(for_parsing["stocks"])
+    # Dividends & Splits
+    # for_parsing = isin_stocks_for_parsing()
+    # collect_fm_dividends(for_parsing["stocks"])
     # collect_tink_dividends(for_parsing["isin"])
     # collect_bcs_dividends(for_parsing["isin"])
     # create_split_base()
     # create_split_adjusted_ohlc()
+    run_divs_to_adj()
