@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import apimoex
 import pandas as pd
 import requests
+from numpy.testing.print_coercion_tables import print_new_cast_table
 
 # Settings
 pd.options.display.max_rows = 500
@@ -28,6 +29,8 @@ def get_data_by_ISSClient(url: str, query: dict, key: str = "") -> pd.DataFrame:
         if key == "":
             keys_len = {}
             for cur_key in data.keys():
+                if '.' in cur_key:
+                    continue
                 keys_len[cur_key] = len(data[cur_key])
             keys_len = dict(sorted(keys_len.items(), key=lambda item: item[1]))
             main_key = list(keys_len)[-1]
@@ -35,18 +38,32 @@ def get_data_by_ISSClient(url: str, query: dict, key: str = "") -> pd.DataFrame:
             main_key = key
 
         cur_data.extend(data[main_key])
-        if len(data[main_key]) == 1000:
-            for idx in range(1000, 1_000_000, 1000):
-                print(idx)
-
+        cursor = len(data[main_key])
+        idx = len(data[main_key])
+        if idx >= 100:
+            while True:
                 client = apimoex.ISSClient(s, url, query)
                 data = client.get(start=idx)
-                cur_data.extend(data[main_key])
-
-                if len(data[main_key]) < 1000:
+                if not data[main_key]:
                     break
 
-        # cur_data.extend(data[main_key])
+                cur_data.extend(data[main_key])
+                idx += len(data[main_key])
+                if len(data[main_key]) < cursor:
+                    break
+
+        # Old code -----------
+        # if len(data[main_key]) == 1000:
+        #     for idx in range(1000, 1_000_000, 1000):
+        #         print(idx)
+        #
+        #         client = apimoex.ISSClient(s, url, query)
+        #         data = client.get(start=idx)
+        #         cur_data.extend(data[main_key])
+        #
+        #         if len(data[main_key]) < 1000:
+        #             break
+        #
         # if len(data[main_key]) == 100:
         #     for idx in range(100, 1_000_000, 100):
         #         print(idx)
@@ -267,11 +284,13 @@ if __name__ == "__main__":
     # df = get_current_stocks_data('RU000A104Z22')
     # print(df)
 
-    main_url = "https://iss.moex.com/iss"
-    main_url += r"/history/engines/stocks/markets/shares/boards/57/listing.json"
-    query = {}
-    df = get_data_by_ISSClient(main_url, query)
-    print(df)
+    print(get_exchange_total_info('2025-09-12'))
+
+    # main_url = "https://iss.moex.com/iss"
+    # main_url += r"/history/engines/stocks/markets/shares/boards/57/listing.json"
+    # query = {}
+    # df = get_data_by_ISSClient(main_url, query)
+    # print(df)
 
     # /iss/history/engines/stock/totals/boards/[board]/securities/[security]
     # Нехватает только полной доходности, включая дивы. Возмрожно по этому поводу стоит позвонить на биржу.

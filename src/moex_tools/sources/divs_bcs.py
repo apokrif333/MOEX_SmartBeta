@@ -3,6 +3,7 @@ import pandas as pd
 import polars as pl
 import requests
 from tqdm import tqdm
+from pprint import pprint
 
 from moex_tools.config import settings
 
@@ -25,9 +26,7 @@ def bcs_download(isin_for_parsing: list) -> pl.DataFrame:
     """
     main_url = "https://api.bcs.ru/divcalendar/v1/dividend/{}"
 
-    div_df = pd.DataFrame(
-        columns=['id', 'company_name', 'last_buy_day', 'closing_date', 'dividend_value', 'close_price', 'yield', 'ISIN']
-    )
+    div_df = pd.DataFrame()
     with requests.Session() as s:
         for t in tqdm(isin_for_parsing, desc="Fetching dividends from BCS"):
             answ = s.get(main_url.format(t))
@@ -40,29 +39,30 @@ def bcs_download(isin_for_parsing: list) -> pl.DataFrame:
                                answ['closing_date'], answ['dividend_value'], answ['close_price'],
                                answ['yield']]
                               ).reshape(1, 7),
-                columns=div_df.columns.drop('ISIN')
+                columns=['id', 'company_name', 'last_buy_day', 'closing_date', 'dividend_value', 'close_price', 'yield']
             )
             additional_table = pd.DataFrame.from_dict(answ['previous_dividends'])
             if len(additional_table) > 0:
                 table = pd.concat([table, additional_table])
-            table['ISIN'] = t
+            table['ISIN'] = answ['isin_code']
+            table['ticker'] = answ['secure_code']
 
             div_df = pd.concat([div_df, table])
 
     div_df.columns = ['id', 'Наименование', 'Последний день для покупки акций', 'Дата закрытия реестра',
-                      'Размер дивиденда', 'Цена акции на закрытие', 'Доходность', 'ISIN']
-
+                      'Размер дивиденда', 'Цена акции на закрытие', 'Доходность', 'ISIN', 'ticker']
+    div_df.drop(labels='id', axis=1, inplace=True)
     div_df['Последний день для покупки акций'] = pd.to_datetime(
         div_df['Последний день для покупки акций'].str.split('T', expand=True)[0]
     )
-    div_df['Дата закрытия реестра'] = pd.to_datetime(div_df['Дата закрытия реестра'].str.split('T', expand=True)[0])
-    div_df.drop('id', axis=1, inplace=True)
+    div_df['Дата закрытия реестра'] = pd.to_datetime(
+        div_df['Дата закрытия реестра'].str.split('T', expand=True)[0]
+    )
+    for c in ['Размер дивиденда', 'Цена акции на закрытие', 'Доходность']:
+        div_df[c] = div_df[c].astype(float)
+    for c in ['Наименование', 'ISIN', 'ticker']:
+        div_df[c] = div_df[c].astype(str)
 
-    div_df['Наименование'] = div_df['Наименование'].astype(str)
-    div_df['Размер дивиденда'] = div_df['Размер дивиденда'].astype(float)
-    div_df['Цена акции на закрытие'] = div_df['Цена акции на закрытие'].astype(float)
-    div_df['Доходность'] = div_df['Доходность'].astype(float)
-    div_df['ISIN'] = div_df['ISIN'].astype(str)
     div_df = pl.from_pandas(div_df)
 
     return div_df

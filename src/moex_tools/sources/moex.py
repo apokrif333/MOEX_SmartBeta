@@ -22,9 +22,13 @@ from moex_tools.MOEX_base_functions import (
 
 
 def _clean_exchange_df(df: pl.DataFrame) -> pl.DataFrame:
-    """Cleans the DataFrame fetched from MOEX.
-    :param df: DataFrame with raw data from MOEX
-    :return: Cleaned DataFrame with relevant columns and types
+    """
+    Cleans and preprocesses a Polars DataFrame containing stock or financial exchange
+    information. The function filters rows based on specific conditions, renames a
+    column, drops unnecessary columns, and casts selected columns to specific data types.
+
+    :param df: Input DataFrame containing stock or financial exchange data to be cleaned.
+    :return: A cleaned and preprocessed DataFrame.
     """
     df = df.filter((pl.col("BOARDID") == "MRKT") & (pl.col("NUMTRADES") != 0)).with_columns(
         pl.col("TRADEDATE").alias("DATE")
@@ -61,9 +65,17 @@ def _clean_exchange_df(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def fetch_exchange_day(day: str) -> pl.DataFrame:
-    """Fetches exchange data for a specific day.
-    :param day: Date in 'YYYYMMDD' format
-    :return: DataFrame with exchange data for the specified day
+    """
+    Fetches and processes exchange data for a specific day.
+
+    This function attempts to retrieve exchange information for a particular day,
+    handling potential connection and request errors. It retries on failures,
+    and processes the returned data to ensure proper formatting and cleanliness.
+
+    :param day: The specific day for which the exchange data is being fetched.
+    :return: A processed DataFrame containing the exchange data for the given
+        day. Returns an empty DataFrame if no relevant data is available or
+        if there are no trades.
     """
     df = None
     success = False
@@ -95,9 +107,14 @@ def fetch_exchange_day(day: str) -> pl.DataFrame:
 
 
 def save_to_parquet(df: pl.DataFrame, name: str) -> None:
-    """Atomically writes a DataFrame to a parquet file.
-    :param df: DataFrame to write
-    :param day: Date in 'YYYYMMDD' format, used for naming the file
+    """
+    Saves a given Polars DataFrame to a Parquet file with a specified name
+    in the raw data directory. This function ensures atomicity of the operation
+    by first writing to a temporary file and then replacing the final file.
+
+    :param df: The Polars DataFrame to be saved to a Parquet file.
+    :param name: The name of the Parquet file to save, excluding the file's
+        extension.
     :return: None
     """
     path = settings.data_dir / "raw" / name
@@ -107,9 +124,17 @@ def save_to_parquet(df: pl.DataFrame, name: str) -> None:
 
 
 def fetch_exchange_range_parallel(end: str | None = None, start: str | None = None) -> None:
-    """Fetches exchange data for a range of dates in parallel.
-    :param end: End date in 'YYYYMMDD' format. If None, defaults to yesterday.
-    :param start: Start date in 'YYYYMMDD' format. If None, defaults to settings.moex_data_start.
+    """
+    Fetches exchange data for a specified date range in parallel.
+
+    This function retrieves exchange data leveraging parallel processing. Data for each day within the
+    specified range is fetched and saved to parquet files, skipping weekends and pre-specified dates.
+    If no new data exists to update, the function exits without performing operations.
+
+    :param end: The end date of the range, formatted as a string (YYYYMMDD). Defaults to yesterday's date
+                if not provided.
+    :param start: The start date of the range, formatted as a string (YYYYMMDD). Defaults to
+                  `settings.moex_data_start` if not provided.
     :return: None
     """
     if start is None:
@@ -136,7 +161,7 @@ def fetch_exchange_range_parallel(end: str | None = None, start: str | None = No
         future_to_date = {executor.submit(fetch_exchange_day, d): d for d in dont_exist}
 
         for future in tqdm(
-            as_completed(future_to_date), total=len(dont_exist), desc="Fetching in parallel"
+            as_completed(future_to_date), total=len(dont_exist), desc="Fetching in parallel MOEX data"
         ):
             day = future_to_date[future]
             try:
@@ -150,7 +175,16 @@ def fetch_exchange_range_parallel(end: str | None = None, start: str | None = No
 
 
 def check_loaded_moex_data():
-    """Checks if there is new data on the exchange and fetches it if necessary."""
+    """
+    Checks for missing MOEX data by comparing available dates with dates present in the local database
+    and determines if additional data needs to be fetched.
+
+    This function iterates over a list of MOEX tickers and retrieves OHLC data for the defined date range.
+    It compares the available exchange dates with files already stored locally and identifies missing dates.
+    For any missing data, it triggers the fetching of this data to ensure the dataset is complete.
+
+    :returns: None
+    """
     with requests.Session() as s:
         df = pd.DataFrame()
         for t in settings.moex_ticker_for_dates_check:
@@ -177,6 +211,17 @@ def check_loaded_moex_data():
 
 
 def create_union_raw_moex_data():
+    """
+    Creates or updates a unionized parquet file containing raw MOEX (Moscow Exchange) data from individual files
+    located in the raw data directory. It consolidates MOEX data starting from a specified date, processes the
+    files to ensure proper data formats, and updates the unionized file.
+
+    If the unionized file does not already exist, it is created with data from all appropriately formatted files
+    in the raw directory. Otherwise, the data in the unionized file is augmented with any new data from the raw
+    directory that postdates the maximum date in the existing unionized file.
+
+    :returns: None
+    """
     union_path = settings.data_dir / "raw" / "union_raw_moex_data.parquet"
     path = settings.data_dir / "raw"
 
@@ -211,6 +256,19 @@ def create_union_raw_moex_data():
 
 
 def create_description_json():
+    """
+    Generates or updates a JSON file containing descriptions for all stocks by fetching
+    their details from an external data source, combining the new data with any
+    existing data in the JSON file.
+
+    This function reads a source parquet file containing raw stock data to identify
+    the list of stock tickers (SECID) that require descriptions. If a JSON file with
+    existing descriptions is found, it will skip fetching data for already described
+    tickers, reducing unnecessary requests. For remaining tickers, it fetches detailed
+    descriptions, processes the data, and updates the JSON file accordingly.
+
+    :returns: None
+    """
     union_path = settings.data_dir / "raw" / "union_raw_moex_data.parquet"
     descipt_path = settings.data_dir / "auxiliary" / "all_stocks_description.json"
 
@@ -235,21 +293,21 @@ def create_description_json():
         json.dump(description_dict, f, indent=4, ensure_ascii=False)
 
 
-def update_description_in_new_prices() -> None:
+def update_description_in_new_prices():
+    """
+    Updates the description data in the new prices dataset by joining stock description data
+    with the union of raw MOEX data. The function reads stock descriptions from a JSON file
+    and combines it with raw MOEX price data stored in a Parquet file. The updated data is
+    saved as a new Parquet file.
+
+    :return: None
+    """
     descipt_path = settings.data_dir / "auxiliary" / "all_stocks_description.json"
     with open(descipt_path) as f:
         description_dict = json.load(f)
-    dict_for_connect = {
-        "ticker": [],
-        "name": [],
-        "regNumber": [],
-        "category": [],
-        "codeType": [],
-        "type": [],
-        "class": [],
-        "code": [],
-        "isin": [],
-    }
+
+    dict_for_connect = {"ticker": [], "name": [], "regNumber": [], "category": [], "codeType": [], "type": [],
+                        "class": [], "code": [], "isin": []}
     for v in description_dict.values():
         dict_for_connect["ticker"].append(v["Код ценной бумаги"])
         dict_for_connect["name"].append(v["Полное наименование"])
@@ -288,3 +346,62 @@ def update_description_in_new_prices() -> None:
     total_df.write_parquet(
         settings.data_dir / "raw" / "union_raw_moex_descript.parquet", compression="lz4"
     )
+
+
+def change_secid():
+    """
+    Processes a dataset to adjust and correct 'SECID' values for financial instruments.
+
+    This function reads a dataset of financial instruments from a Parquet file, applies
+    a series of transformations to detect and resolve discrepancies in 'SECID' values
+    based on specific business logic, and writes the corrected dataset back to the file
+    system. It ensures consistency of 'SECID' values by identifying and replacing
+    incorrect or outdated values.
+
+    :return: None
+    """
+    path = settings.data_dir / "raw" / "union_raw_moex_descript.parquet"
+    total_df = pl.read_parquet(path).with_columns(pl.col('DATE').cast(pl.Date))
+
+    secid_correct = (
+        total_df.sort('isin', 'DATE')
+        .filter(pl.col('ISSUESIZE') != 0)
+        .with_columns(
+            date_diff=(pl.col('DATE') - pl.col('DATE').shift(1)).over('isin').dt.total_days()
+        ).filter(
+            (
+                (pl.col('SECID') != pl.col('SECID').shift(1)).over('isin') &
+                (pl.col('category') == pl.col('category').shift(1)).over('isin') &
+                (pl.col('date_diff') > 0) &
+                (pl.col('ISSUESIZE') == pl.col('ISSUESIZE').shift(1)).over('isin')
+            )
+        ).sort('isin', 'DATE')
+        .group_by('isin').last()
+    )
+    secid_correct = secid_correct['SECID', 'isin'].rename({'SECID': 'main_SECID'})
+
+    total_df = (
+        total_df.join(secid_correct, on='isin', how='left')
+        .with_columns(
+            pl.when(pl.col('main_SECID').is_null()).then(pl.col('SECID')).otherwise(pl.col('main_SECID')).alias('SECID')
+        ).sort('SECID', 'DATE')
+        .drop('main_SECID')
+    )
+
+    total_df.write_parquet(
+        settings.data_dir / "raw" / "union_raw_moex_descript.parquet", compression="lz4"
+    )
+
+def collect_moex_data():
+    """
+    Gathers MOEX (Moscow Exchange) data by performing a series of operations to collect,
+    validate, combine, and update the data structure for further processing.
+
+    :return: None
+    """
+    fetch_exchange_range_parallel()
+    check_loaded_moex_data()
+    create_union_raw_moex_data()
+    create_description_json()
+    update_description_in_new_prices()
+    change_secid()

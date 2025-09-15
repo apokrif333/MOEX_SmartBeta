@@ -1,7 +1,7 @@
 import polars as pl
 
 from ..config import settings
-from ..sources.moex import *
+from ..sources.moex import collect_moex_data
 from ..sources.divs_finance_marker import collect_fm_dividends
 from ..sources.divs_tinkoff import collect_tink_dividends
 from ..sources.divs_bcs import collect_bcs_dividends
@@ -49,17 +49,13 @@ def isin_stocks_for_parsing() -> dict:
 
 def run() -> None:
     # Raw MOEX data
-    # fetch_exchange_range_parallel()
-    # check_loaded_moex_data()
-    # create_union_raw_moex_data()
-    # create_description_json()
-    # update_description_in_new_prices()
+    collect_moex_data()
 
     # Dividends & Splits
-    # for_parsing = isin_stocks_for_parsing()
-    # collect_fm_dividends(for_parsing["stocks"])
-    # collect_tink_dividends(for_parsing["isin"])
-    # collect_bcs_dividends(for_parsing["isin"])
-    # create_split_base()
-    # create_split_adjusted_ohlc()
+    for_parsing = isin_stocks_for_parsing()
+    collect_fm_dividends(for_parsing["stocks"])
+    collect_tink_dividends(for_parsing["isin"])
+    collect_bcs_dividends(for_parsing["isin"])
+    create_split_base()
+    create_split_adjusted_ohlc()
     run_divs_to_adj()

@@ -112,6 +112,8 @@ def create_split_adjusted_ohlc():
 
     :return: None
     """
+    print("Creating split-adjusted OHLC dataset by splits...")
+
     base_path = settings.data_dir / "raw" / "union_raw_moex_descript.parquet"
     splits_path = settings.data_dir / "auxiliary" / "splits_moex.parquet"
     out_path = settings.data_dir / "intermediate" / "union_raw_moex_descript_split.parquet"
