@@ -1,12 +1,12 @@
 import polars as pl
 
-from ..config import settings
-from ..sources.moex import collect_moex_data
-from ..sources.divs_finance_marker import collect_fm_dividends
-from ..sources.divs_tinkoff import collect_tink_dividends
-from ..sources.divs_bcs import collect_bcs_dividends
-from ..sources.splits_moex import create_split_base, create_split_adjusted_ohlc
-from ..sources.divs_to_adj import run_divs_to_adj
+from moex_tools.config import settings
+from moex_tools.sources.moex import collect_moex_data
+from moex_tools.sources.divs_finance_marker import collect_fm_dividends
+from moex_tools.sources.divs_tinkoff import collect_tink_dividends
+from moex_tools.sources.divs_bcs import collect_bcs_dividends
+from moex_tools.sources.splits_moex import create_split_base, create_split_adjusted_ohlc
+from moex_tools.sources.divs_to_adj import run_divs_to_adj
 
 
 def isin_stocks_for_parsing() -> dict:

@@ -151,7 +151,8 @@ def fetch_exchange_range_parallel(end: str | None = None, start: str | None = No
     path = settings.data_dir / "raw"
     already_exist = []
     for f in os.listdir(path):
-        if "moex_data.parquet" in f:
+        pattern = r"^\d{8}_moex_data\.parquet$"
+        if bool(re.match(pattern, f)):
             already_exist.append(f.split("_")[0])
     dont_exist = set(dates) - set(already_exist) - settings.war_days
     dont_exist = [d for d in dont_exist if datetime.datetime.strptime(d, "%Y%m%d").weekday() < 5]
@@ -199,7 +200,8 @@ def check_loaded_moex_data():
         already_exist = []
         path = settings.data_dir / "raw"
         for f in os.listdir(path):
-            if "moex_data.parquet" in f:
+            pattern = r"^\d{8}_moex_data\.parquet$"
+            if bool(re.match(pattern, f)):
                 already_exist.append(f.split("_")[0])
 
         today_str = datetime.datetime.now().strftime("%Y%m%d")
