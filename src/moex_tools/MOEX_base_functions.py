@@ -284,7 +284,11 @@ if __name__ == "__main__":
     # df = get_current_stocks_data('RU000A104Z22')
     # print(df)
 
-    print(get_exchange_total_info('2025-09-12'))
+    url = "https://iss.moex.com/iss/history/engines/stock/markets/index/securities/MCFTR.json"
+    answ = get_data_by_ISSClient(url, {})
+    print(answ)
+
+    # print(get_exchange_total_info('2025-09-12'))
 
     # main_url = "https://iss.moex.com/iss"
     # main_url += r"/history/engines/stocks/markets/shares/boards/57/listing.json"

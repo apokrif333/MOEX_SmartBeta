@@ -1,6 +1,6 @@
 import polars as pl
 
-from moex_tools.strategies.low_volatility.pipeline import run_low_volatility_backtest
+from moex_tools.strategies.low_volatility.pipelines import run_low_volatility_backtest
 
 
 def test_run_low_volatility_backtest_smoke(monkeypatch, tmp_path):
@@ -25,7 +25,7 @@ def test_run_low_volatility_backtest_smoke(monkeypatch, tmp_path):
     base.write_parquet(file_path)
 
     # Patch loader to read from tmp path
-    from moex_tools.strategies.low_volatility import data as data_mod
+    from moex_tools.strategies.low_volatility import main_class as data_mod
     monkeypatch.setattr(data_mod, "load_base_df", lambda path=None: pl.read_parquet(file_path))
 
     res = run_low_volatility_backtest()
