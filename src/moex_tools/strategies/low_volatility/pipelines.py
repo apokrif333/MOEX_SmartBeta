@@ -21,7 +21,7 @@ def run_weights_for_bot():
     port = strata.filter_for_daily_check()
     port = strata.tink_load_figi(port)
     port = strata.tink_load_prices(port)
-    strata.print_bot_data(port)
+    strata.print_bot_data(port, assets=15)
 
 
 def run_analyse_backtest():

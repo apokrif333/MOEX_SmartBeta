@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import datetime
+import json
 import os
 import pickle
 
@@ -9,6 +12,8 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import polars as pl
 from pandasgui import show as show_pd
+from telegram import Bot
+from telegram.constants import ParseMode
 from tinkoff.invest import Client, InstrumentIdType, InstrumentType
 from tqdm import tqdm
 
@@ -20,7 +25,6 @@ pio.renderers.default = "browser"
 
 
 class LowVolatilityStrategy:
-    BOT_PATH = r"C:\Users\alexa\Мой диск\Доки\Фонд\Для партнёров\Марченко\Бот. Акции РФ"
     """
     Класс для стратегии низкой волатильности с настраиваемыми параметрами.
     """
@@ -255,11 +259,12 @@ class LowVolatilityStrategy:
 
         return port
 
-    def print_bot_data(self, port: pd.DataFrame):
-        cur_port = port.sort_values('VolRank')[['SECID', 'VolRank', f'StDev_{self._window}']].iloc[:15]
+    def print_bot_data(self, port: pd.DataFrame, assets: int):
+        cur_port = port.sort_values('VolRank')[['SECID', 'VolRank', f'StDev_{self._window}']].iloc[:assets]
         cur_port['Weight'] = (1 / cur_port[f'StDev_{self._window}']) / (1 / cur_port[f'StDev_{self._window}']).sum()
 
-        past_port = pd.read_csv(settings.bot_path)
+        past_port = pd.read_csv(settings.bot_path / 'Relaible_weights.csv')
+        past_port.to_csv(settings.bot_path / 'Relaible_weights_old.csv', index=False)
 
         both_ports = pd.merge(
             past_port,
@@ -269,18 +274,55 @@ class LowVolatilityStrategy:
             suffixes=('_past', '_cur'),
             how='outer'
         )
-        both_ports['diff'] = both_ports['Weight_cur'] - both_ports['Weight_past']
+        remove_tickers = both_ports[pd.isna(both_ports['SECID'])]['Ticker']
+        add_tickers = both_ports[pd.isna(both_ports['Ticker'])]['SECID']
+        old_tickers = list(both_ports['Ticker'].dropna())
 
-        print(both_ports.sort_values('diff'))
-        print(both_ports[['SECID', 'Weight_cur']])
+        df_for_save = (
+            both_ports[~pd.isna(both_ports['SECID'])]
+            .rename(columns={'Weight_cur': 'Weight'})
+            .sort_values('Weight', ascending=False)
+            [['SECID', 'Weight']]
+        )
+        check = df_for_save['Weight'].sum()
+        assert check == 1.0, f'Total assets weight is not equal to 1.0 - {check}'
 
-        self.print_stata(both_ports['Ticker'].unique())
+        self.create_bot_messsage(remove_tickers, add_tickers, old_tickers)
 
-    @staticmethod
-    def print_stata(secid):
+    def create_bot_messsage(self, remove_tickers, add_tickers, old_tickers):
+
+        def get_reb_text(tickers, description_dict):
+            text = ''
+            for t in tickers.values:
+                name = description_dict[t]['Полное наименование']
+                text += f"<b>{t}</b> ({name}), "
+            return text
+
+        def get_gain_text(df, col_name, description_dict):
+            cur_df = df.filter(pl.col(col_name) > 1).sort(col_name, descending=True)[:3]['SECID', col_name].to_pandas()
+            text = ''
+            for idx, row in cur_df.iterrows():
+                t = row['SECID']
+                name = description_dict[t]['Полное наименование']
+                move = (row[col_name] - 1) * 100
+                text += f"{t} ({name}) {move:.1f}%\n"
+            return text
+
+        path = settings.data_dir / 'auxiliary' / 'all_stocks_description.json'
+        with open(path) as f:
+            description_dict = json.load(f)
+
+        if len(remove_tickers) == 0 and len(add_tickers) == 0:
+            need_reb_template = '\n⚖️ В данный момент ребалансировка не требуется.\n'
+        else:
+            for_sell = get_reb_text(remove_tickers, description_dict)
+            for_buy = get_reb_text(add_tickers, description_dict)
+            need_reb_template = f"""\n⚖️ Требуется ребалансировка.
+            \nПроданы: {for_sell}
+            \nКуплены: {for_buy}\n"""
+
+        secid = old_tickers + ['BOND', 'GOLD']
         temp_base = pl.read_parquet(settings.data_dir / 'moex_splits_divs.parquet')
-        secid = list(secid) + ['BOND', 'GOLD']
-
         gain_df = (
             temp_base.filter(pl.col('SECID').is_in(secid))
             .sort(['SECID', 'DATE'], descending=[False, True])
@@ -299,9 +341,25 @@ class LowVolatilityStrategy:
                 pl.col('CLOSE_adj').first()
             )
         )
-        print(gain_df)
+        for_21 = get_gain_text(gain_df, 'shift21', description_dict)
+        for_63 = get_gain_text(gain_df, 'shift63', description_dict)
+        template_gain = f'\n📈Лидеры роста за 30 календарных дней (ТОП 3)\n{for_21}'
+        template_gain += f'\n💥Лидеры роста за 91 календарный день (ТОП 3)\n{for_63}'
 
-    def run_backtest(self) -> pl.DataFrame:
+        cur_date = datetime.datetime.now().strftime('%Y-%m-%d')
+        hello = 'Доброй новой недели!\n'
+        end_text = '\nТекущие доли всегда можно проверить в боте \n@QcmStockRusBot'
+        message = f"<b>{cur_date}</b>\n" + hello + need_reb_template + template_gain + end_text
+
+        asyncio.run(self.send_bot_message(message))
+
+    @staticmethod
+    async def send_bot_message(message: str):
+        chat_id = "-1001166999638"
+        async with Bot(token=settings.bot_minvol_token) as bot:
+            await bot.send_message(chat_id=chat_id, text=message, parse_mode=ParseMode.HTML)
+
+    def run_backtest(self):
         """
         Запускает полный бэктест стратегии.
         """
