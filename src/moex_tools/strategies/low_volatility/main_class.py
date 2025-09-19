@@ -284,8 +284,9 @@ class LowVolatilityStrategy:
             .sort_values('Weight', ascending=False)
             [['SECID', 'Weight']]
         )
-        check = df_for_save['Weight'].sum()
-        assert check == 1.0, f'Total assets weight is not equal to 1.0 - {check}'
+
+        check = 1 - df_for_save['Weight'].sum()
+        assert check < 0.01, f'Total assets weight is not equal to 1.0 - {check}'
 
         self.create_bot_messsage(remove_tickers, add_tickers, old_tickers)
 

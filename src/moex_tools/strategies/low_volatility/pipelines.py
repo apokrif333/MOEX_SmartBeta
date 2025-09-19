@@ -1,5 +1,5 @@
 from __future__ import annotations
-from main_class import LowVolatilityStrategy
+from moex_tools.strategies.low_volatility.main_class import LowVolatilityStrategy
 
 def run_backtests():
     periods = [0.25, 0.5, 1, 2, 5, 10]
