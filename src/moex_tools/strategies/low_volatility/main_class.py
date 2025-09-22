@@ -280,13 +280,13 @@ class LowVolatilityStrategy:
 
         df_for_save = (
             both_ports[~pd.isna(both_ports['SECID'])]
-            .rename(columns={'Weight_cur': 'Weight'})
-            .sort_values('Weight', ascending=False)
-            [['SECID', 'Weight']]
+            .rename(columns={'SECID': 'Ticker', 'Weight_cur': 'Weight'})
+            .sort_values(by='Weight', ascending=False)
+            [['Ticker', 'Weight']]
         )
-
         check = 1 - df_for_save['Weight'].sum()
         assert check < 0.01, f'Total assets weight is not equal to 1.0 - {check}'
+        df_for_save.to_csv(settings.bot_path / 'Relaible_weights.csv', index=False)
 
         self.create_bot_messsage(remove_tickers, add_tickers, old_tickers)
 
@@ -356,7 +356,7 @@ class LowVolatilityStrategy:
 
     @staticmethod
     async def send_bot_message(message: str):
-        chat_id = "-1001166999638"
+        chat_id = "-1002471577619"
         async with Bot(token=settings.bot_minvol_token) as bot:
             await bot.send_message(chat_id=chat_id, text=message, parse_mode=ParseMode.HTML)
 

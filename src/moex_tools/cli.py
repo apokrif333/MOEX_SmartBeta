@@ -21,7 +21,7 @@ UTC_ZONE = dt.timezone.utc
 def _next_monday_0950_msk(now_utc: dt.datetime) -> dt.datetime:
     now_msk = now_utc.astimezone(MSK_ZONE)
     target_msk = now_msk.replace(hour=9, minute=50, second=0, microsecond=0)
-    days_ahead = (4 - now_msk.weekday()) % 7
+    days_ahead = (0 - now_msk.weekday()) % 7
     target_msk = target_msk + dt.timedelta(days=days_ahead)
     return target_msk.astimezone(UTC_ZONE)
 
