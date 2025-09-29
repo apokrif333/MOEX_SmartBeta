@@ -54,6 +54,12 @@ class LowVolatilityStrategy:
         """
         base_pl = pl.read_parquet(settings.data_dir / "moex_splits_divs.parquet")
 
+        last_date = pl.read_parquet(settings.data_dir / 'raw' /'union_raw_moex_data.parquet') \
+            .with_columns(pl.col('DATE').cast(pl.Date))['DATE'].max()
+        if last_date != base_pl['DATE'].max():
+            print(f"Last date in base_pl is {base_pl['DATE'].max()}, last date in union_raw_moex_data is {last_date}")
+            raise Exception("Last date in base_pl is not equal to last date in union_raw_moex_data")
+
         base_pl = base_pl.filter(
             (pl.col('class') == 'Акции') &
             (pl.col('category') != 'Акция привилегированная ') &

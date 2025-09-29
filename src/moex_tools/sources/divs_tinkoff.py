@@ -35,7 +35,16 @@ def tink_get_figi(isin_for_parsing: list) -> pl.DataFrame:
         count = 0
         with Client(settings.tinkoff_api_token) as client:
             for isin in tqdm(isins_for_parsing, desc="Fetching FIGI from Tinkoff"):
-                answ = client.instruments.find_instrument(query=isin)
+
+                while True:
+                    try:
+                        answ = client.instruments.find_instrument(query=isin)
+                        break
+                    except Exception as e:
+                        print(e)
+                        print(f"Sleeping for 5 sec")
+                        time.sleep(5)
+
                 for i in answ.instruments:
                     tink_figi["isin"].append(i.isin)
                     tink_figi["figi"].append(i.figi)
