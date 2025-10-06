@@ -36,7 +36,6 @@ def wait():
         tgt_utc = _next_monday_0950_msk(now_utc)
         remaining = (tgt_utc - now_utc).total_seconds()
 
-        logging.info(f"{now_utc}, {tgt_utc}, {remaining}")
         if remaining <= 0:
             logging.info("WAIT: it's time — Monday 09:50 MSK reached.")
             return
