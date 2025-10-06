@@ -11,11 +11,13 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 import polars as pl
+import requests
 from pandasgui import show as show_pd
 from telegram import Bot
 from telegram.constants import ParseMode
 from tinkoff.invest import Client, InstrumentIdType, InstrumentType
 from tqdm import tqdm
+from pprint import pprint
 
 from moex_tools.MOEX_base_functions import get_data_by_ISSClient
 from moex_tools.config import settings
@@ -26,15 +28,27 @@ pio.renderers.default = "browser"
 
 class LowVolatilityStrategy:
     """
-    Класс для стратегии низкой волатильности с настраиваемыми параметрами.
+    Represents a low volatility investment strategy for constructing and managing a portfolio.
+
+    This class is designed to implement a low volatility strategy by calculating volatility metrics for
+    various assets, ranking them based on volatility, and identifying assets that fit the portfolio's
+    criteria. It employs various data preparation and calculation functions such as filtering base data,
+    preparing comprehensive datasets, calculating volatility, and ranking based on volatility values.
+
+    :ivar period: Portfolio rebalancing period in years.
+    :ivar capital: Total capital allocated to the portfolio.
+    :ivar assets: Number of assets to include in the portfolio.
+    :ivar rebalance: Frequency of portfolio rebalancing. Acceptable values are 'weekly', 'monthly',
+                     'quarterly', and 'yearly'.
+    :type rebalance: str
     """
     def __init__(
             self,
             period: float = 2,  # 0.25, 0.5, 1, 2, 5, 10
 
             capital: int = 1_000_000,
-            assets: int = 40,  # количество активов в портфеле
-            rebalance: str = 'weekly',  # weekly, monthly, quarterly, yearly
+            assets: int = 40,
+            rebalance: str = 'weekly',
     ):
         # External parameters
         self.period = period
@@ -265,6 +279,37 @@ class LowVolatilityStrategy:
 
         return port
 
+    def print_bcs_data(self, port: pd.DataFrame, assets: int):
+        blocked_tickers = ['SIBN', 'NKNC', 'GCHE', 'KAZT', 'AVAN', 'KZOS', 'KFBA']
+        port = port[~port['SECID'].isin(blocked_tickers)].copy()
+
+        need_cols = ['DATE', 'SECID', 'VolRank', f'StDev_{self._window}', 'mid_price', 'lot']
+        cur_port = port.sort_values('VolRank')[need_cols].iloc[:assets]
+        cur_port['Weight'] = (1 / cur_port[f'StDev_{self._window}']) / (1 / cur_port[f'StDev_{self._window}']).sum()
+        cur_port['Weight'] = np.where(cur_port['Weight'] > 0.1, 0.097, cur_port['Weight'])
+        cur_port['Weight'] = cur_port['Weight'] / cur_port['Weight'].sum()
+        cur_port['Weight_BCS'] = (cur_port['Weight'] * 100).round(2)
+
+        shares_prices = {
+            'assets': len(cur_port),
+            'assetsPrices': cur_port['mid_price'].to_list(),
+            'assetsWeights': cur_port['Weight'].to_list(),
+            'assetsSizeLots': cur_port['lot'].to_list(),
+            "portfolioValue": self.capital,
+            'assetsMinimumPositions': [1] * len(cur_port)
+        }
+
+        url = 'https://api.portfoliooptimizer.io/v1'
+        req = '/portfolio/construction/investable'
+        answ = requests.post(url + req, json=shares_prices)
+
+        cur_port['shares_quantity'] = answ.json()['assetsPositions']
+        cur_port['true_weight'] = answ.json()['assetsWeights']
+        cur_port['w_diff'] = (cur_port['true_weight'] - cur_port['Weight']).round(4)
+        cur_port['true_weight'] = cur_port['true_weight'] * 100
+
+        cur_port.to_csv(settings.bot_path / 'BCS_weights.csv', index=False)
+
     def print_bot_data(self, port: pd.DataFrame, assets: int):
         cur_port = port.sort_values('VolRank')[['SECID', 'VolRank', f'StDev_{self._window}']].iloc[:assets]
         cur_port['Weight'] = (1 / cur_port[f'StDev_{self._window}']) / (1 / cur_port[f'StDev_{self._window}']).sum()
@@ -286,9 +331,9 @@ class LowVolatilityStrategy:
 
         df_for_save = (
             both_ports[~pd.isna(both_ports['SECID'])]
+            [['SECID', 'Weight_cur']]
             .rename(columns={'SECID': 'Ticker', 'Weight_cur': 'Weight'})
             .sort_values(by='Weight', ascending=False)
-            [['Ticker', 'Weight']]
         )
         check = 1 - df_for_save['Weight'].sum()
         assert check < 0.01, f'Total assets weight is not equal to 1.0 - {check}'
