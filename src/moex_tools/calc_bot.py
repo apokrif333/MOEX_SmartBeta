@@ -1,6 +1,8 @@
 import asyncio
 import io
 import logging
+import random
+import time
 from logging.handlers import TimedRotatingFileHandler
 
 import apimoex
@@ -64,7 +66,7 @@ def get_ports():
     return reliable_port, reliable_hedge_port
 
 
-def get_data_by_ISSClient(url: str, query: dict, timeout=(5, 30)) -> pd.DataFrame:
+def get_data_by_ISSClient(url: str, query: dict, timeout=(10, 90)) -> pd.DataFrame:
     cur_data = []
     with requests.Session() as s:
 
@@ -74,8 +76,8 @@ def get_data_by_ISSClient(url: str, query: dict, timeout=(5, 30)) -> pd.DataFram
             return _orig_request(method, url, **kwargs)
         s.request = _request
 
-        client = apimoex.ISSClient(s, url, query)
-        data = client.get()  # get(), get_all()
+        client = apimoex.ISSClient(s, url, query).get()
+        data = iss_get_with_retries(client)  # client.get(), get(), get_all()
 
         keys_len = {}
         for key in data.keys():
@@ -86,10 +88,10 @@ def get_data_by_ISSClient(url: str, query: dict, timeout=(5, 30)) -> pd.DataFram
         cur_data.extend(data[main_key])
         if len(data[main_key]) == 1000:
             for idx in range(1000, 1_000_000, 1000):
-                print(idx)
+                logger.info("ISS pagination start=%s", idx)
 
                 client = apimoex.ISSClient(s, url, query)
-                data = client.get(start=idx)
+                data = iss_get_with_retries(client, start=idx)  # client.get(start=idx)
                 cur_data.extend(data[main_key])
 
                 if len(data[main_key]) < 1000:
@@ -121,7 +123,7 @@ def get_current_stocks_data(sec_list: pd.Series) -> pd.DataFrame:
     return total_prices
 
 
-def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(5, 30)):
+def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(5, 90)):
     offer_na = sum(cur_port["OFFER"].isna())
     last_na = sum(cur_port["LAST"].isna())
     market_na = sum(cur_port["MARKETPRICE"].isna())
@@ -162,7 +164,7 @@ def calc_port(capital: float, port: dict):
     cur_price = get_current_stocks_data(cur_port["ticker"])
     cur_port = cur_port.merge(cur_price, left_on="ticker", right_on="SECID", how="inner")
 
-    logger.info(cur_port)
+    logger.info("cur_port rows=%d cols=%d", cur_port.shape[0], cur_port.shape[1])
     cur_port = optimize_weights(cur_port, capital)
 
     return cur_port
@@ -300,6 +302,20 @@ async def start_calc_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await show_portfolio_selection(update, context)
 
 
+def iss_get_with_retries(client, start=None, retries=4):
+    last_exc = None
+    for attempt in range(retries):
+        try:
+            if start is None:
+                return client.get()
+            return client.get(start=start)
+        except requests.exceptions.RequestException as e:
+            last_exc = e
+            sleep_s = (0.5 * (2 ** attempt)) + random.random() * 0.2
+            time.sleep(sleep_s)
+    raise last_exc
+
+
 def main():
     reliable_port, reliable_hedge_port = get_ports()
 
@@ -331,7 +347,7 @@ def main():
     application.add_handler(CommandHandler("disclaimer", disclaimer))
     application.bot_data["ports"] = (reliable_port, reliable_hedge_port)
 
-    print("Бот запущен")
+    logger.info("Бот запущен")
     application.run_polling(timeout=50, bootstrap_retries=5)
 
 
