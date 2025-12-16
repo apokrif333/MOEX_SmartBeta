@@ -26,7 +26,7 @@ pd.options.display.max_columns = 100
 pd.options.display.width = 1200
 handlers = [
     TimedRotatingFileHandler(
-        settings.data_dir / "logs" /"calc_bot.log",
+        settings.data_dir / "logs" / "calc_bot.log",
         when="midnight",
         interval=1,
         backupCount=30,
@@ -42,18 +42,19 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=handlers,
-    force=True
+    force=True,
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.info("calc_bot: logging initialized")
+
 
 # Calc Func ------------------------------------------------------------------------------------------------------------
 def get_ports():
     url = "https://drive.google.com/file/d/1E-5adtWX7uqqvWN3WZgIA9J8BfA76v6H/view"
     file_id = url.split("/d/")[1].split("/")[0]
     download_url = f"https://drive.google.com/uc?id={file_id}&export=download"
-    r = requests.get(download_url, timeout=(5, 30))
+    r = requests.get(download_url, timeout=(5, 10))
     r.raise_for_status()
     df = pd.read_csv(io.BytesIO(r.content))
 
@@ -66,17 +67,19 @@ def get_ports():
     return reliable_port, reliable_hedge_port
 
 
-def get_data_by_ISSClient(url: str, query: dict, timeout=(10, 90)) -> pd.DataFrame:
+def get_data_by_ISSClient(url: str, query: dict, timeout=(5, 10)) -> pd.DataFrame:
     cur_data = []
     with requests.Session() as s:
 
         _orig_request = s.request
+
         def _request(method, url, **kwargs):
             kwargs.setdefault("timeout", timeout)
             return _orig_request(method, url, **kwargs)
+
         s.request = _request
 
-        client = apimoex.ISSClient(s, url, query).get()
+        client = apimoex.ISSClient(s, url, query)
         data = iss_get_with_retries(client)  # client.get(), get(), get_all()
 
         keys_len = {}
@@ -123,7 +126,7 @@ def get_current_stocks_data(sec_list: pd.Series) -> pd.DataFrame:
     return total_prices
 
 
-def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(5, 90)):
+def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(5, 10)):
     offer_na = sum(cur_port["OFFER"].isna())
     last_na = sum(cur_port["LAST"].isna())
     market_na = sum(cur_port["MARKETPRICE"].isna())
@@ -260,7 +263,10 @@ async def start_calc_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
         capital = float(update.message.text)
         selected_port = context.user_data.get("portfolio")
 
-        cur_port = await asyncio.to_thread(calc_port, capital, selected_port)
+        cur_port = await asyncio.wait_for(
+            asyncio.to_thread(calc_port, capital, selected_port),
+            timeout=30
+        )
 
         response = []
         if cur_port["OFFER"].isna().sum() > 0:
@@ -302,7 +308,7 @@ async def start_calc_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await show_portfolio_selection(update, context)
 
 
-def iss_get_with_retries(client, start=None, retries=4):
+def iss_get_with_retries(client, start=None, retries=3):
     last_exc = None
     for attempt in range(retries):
         try:
@@ -311,8 +317,7 @@ def iss_get_with_retries(client, start=None, retries=4):
             return client.get(start=start)
         except requests.exceptions.RequestException as e:
             last_exc = e
-            sleep_s = (0.5 * (2 ** attempt)) + random.random() * 0.2
-            time.sleep(sleep_s)
+            time.sleep(attempt)
     raise last_exc
 
 
@@ -320,7 +325,8 @@ def main():
     reliable_port, reliable_hedge_port = get_ports()
 
     application = (
-        ApplicationBuilder().token(TELEGRAM_TOKEN)
+        ApplicationBuilder()
+        .token(TELEGRAM_TOKEN)
         .get_updates_connect_timeout(10)
         .get_updates_read_timeout(70)
         .get_updates_pool_timeout(10)
