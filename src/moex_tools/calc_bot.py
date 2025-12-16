@@ -1,7 +1,9 @@
+import asyncio
+import io
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 import apimoex
-import asyncio
 import pandas as pd
 import requests
 from telegram import Update, ReplyKeyboardMarkup
@@ -20,23 +22,38 @@ from moex_tools.config import settings
 pd.options.display.max_rows = 500
 pd.options.display.max_columns = 100
 pd.options.display.width = 1200
+handlers = [
+    TimedRotatingFileHandler(
+        settings.data_dir / "logs" /"calc_bot.log",
+        when="midnight",
+        interval=1,
+        backupCount=30,
+        encoding="utf-8",
+    ),
+    logging.StreamHandler(),
+]
 
-# @QcmStockRusBot, @QcmTestBot
-TELEGRAM_TOKEN = settings.bot_calc_test_token
-
+TELEGRAM_TOKEN = settings.bot_calc_test_token  # @QcmStockRusBot, @QcmTestBot
 SELECT_PORTFOLIO, CALCULATE, SHOW_PORTFOLIO = range(3)
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=handlers,
+    force=True
 )
-
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
+logger.info("calc_bot: logging initialized")
 
 # Calc Func ------------------------------------------------------------------------------------------------------------
 def get_ports():
     url = "https://drive.google.com/file/d/1E-5adtWX7uqqvWN3WZgIA9J8BfA76v6H/view"
     file_id = url.split("/d/")[1].split("/")[0]
     download_url = f"https://drive.google.com/uc?id={file_id}&export=download"
-    df = pd.read_csv(download_url)
+    r = requests.get(download_url, timeout=(5, 30))
+    r.raise_for_status()
+    df = pd.read_csv(io.BytesIO(r.content))
 
     reliable_port = dict(zip(df["Ticker"], df["Weight"]))
     reliable_hedge_port = {
@@ -47,7 +64,7 @@ def get_ports():
     return reliable_port, reliable_hedge_port
 
 
-def get_data_by_ISSClient(url: str, query: dict, timeout=(3.05, 30)) -> pd.DataFrame:
+def get_data_by_ISSClient(url: str, query: dict, timeout=(5, 30)) -> pd.DataFrame:
     cur_data = []
     with requests.Session() as s:
 
@@ -104,7 +121,7 @@ def get_current_stocks_data(sec_list: pd.Series) -> pd.DataFrame:
     return total_prices
 
 
-def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(3.05, 30)):
+def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(5, 30)):
     offer_na = sum(cur_port["OFFER"].isna())
     last_na = sum(cur_port["LAST"].isna())
     market_na = sum(cur_port["MARKETPRICE"].isna())
@@ -129,9 +146,11 @@ def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(3.05, 30))
     url = "https://api.portfoliooptimizer.io/v1"
     req = "/portfolio/construction/investable"
     answ = requests.post(url + req, json=shares_prices, timeout=timeout)
+    answ.raise_for_status()
+    data = answ.json()
 
-    cur_port["shares_quantity"] = answ.json()["assetsPositions"]
-    cur_port["true_weight"] = answ.json()["assetsWeights"]
+    cur_port["shares_quantity"] = data["assetsPositions"]
+    cur_port["true_weight"] = data["assetsWeights"]
 
     return cur_port
 
@@ -143,17 +162,21 @@ def calc_port(capital: float, port: dict):
     cur_price = get_current_stocks_data(cur_port["ticker"])
     cur_port = cur_port.merge(cur_price, left_on="ticker", right_on="SECID", how="inner")
 
-    print(cur_port)
+    logger.info(cur_port)
     cur_port = optimize_weights(cur_port, capital)
 
     return cur_port
 
 
 # Bot Func ------------------------------------------------------------------------------------------------------------
+async def on_error(update, context):
+    logger.exception("PTB error", exc_info=context.error)
+
+
 async def check_subscription(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
     CHAT_ID = -1002471577619
     member = await context.bot.get_chat_member(chat_id=CHAT_ID, user_id=user_id)
-    print(member)
+    logger.info(member)
     return member.status in ("member", "administrator", "creator")
 
 
@@ -209,7 +232,7 @@ async def handle_portfolio_selection(update: Update, context: ContextTypes.DEFAU
     if user_choice == "Перезапустить":
         return await start(update, context)
 
-    reliable_port, reliable_hedge_port = get_ports()
+    reliable_port, reliable_hedge_port = context.bot_data["ports"]
 
     user_choice = update.message.text
     if user_choice == "Высоконадёжный портфель":
@@ -269,9 +292,24 @@ async def start_calc_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Введите корректную сумму капитала, типа 300000")
         return CALCULATE
 
+    except Exception:
+        logger.exception("calc failed")
+        await update.message.reply_text(
+            "Сейчас не получилось посчитать проблемы с - сеть/сервисы/биржа. Попробуйте ещё раз через минуту."
+        )
+        return await show_portfolio_selection(update, context)
+
 
 def main():
-    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    reliable_port, reliable_hedge_port = get_ports()
+
+    application = (
+        ApplicationBuilder().token(TELEGRAM_TOKEN)
+        .get_updates_connect_timeout(10)
+        .get_updates_read_timeout(70)
+        .get_updates_pool_timeout(10)
+        .build()
+    )
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -288,11 +326,13 @@ def main():
         allow_reentry=True,
     )
 
+    application.add_error_handler(on_error)
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("disclaimer", disclaimer))
+    application.bot_data["ports"] = (reliable_port, reliable_hedge_port)
 
     print("Бот запущен")
-    application.run_polling()
+    application.run_polling(timeout=50, bootstrap_retries=5)
 
 
 if __name__ == "__main__":
