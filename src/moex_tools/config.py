@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     tinkoff_api_token: str
     bot_path: Path
     bot_minvol_token: str
-
+    bot_calc_main_token: str
+    bot_calc_test_token: str
 
     model_config = SettingsConfigDict(env_file=PROJECT_ROOT / ".env", env_file_encoding="utf-8")
 
