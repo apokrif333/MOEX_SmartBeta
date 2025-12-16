@@ -67,16 +67,14 @@ def get_ports():
     return reliable_port, reliable_hedge_port
 
 
-def get_data_by_ISSClient(url: str, query: dict, timeout=(5, 10)) -> pd.DataFrame:
+def get_data_by_ISSClient(url: str, query: dict, timeout=(3, 4)) -> pd.DataFrame:
     cur_data = []
     with requests.Session() as s:
 
         _orig_request = s.request
-
         def _request(method, url, **kwargs):
             kwargs.setdefault("timeout", timeout)
             return _orig_request(method, url, **kwargs)
-
         s.request = _request
 
         client = apimoex.ISSClient(s, url, query)
@@ -303,7 +301,7 @@ async def start_calc_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         logger.exception("calc failed")
         await update.message.reply_text(
-            "Сейчас не получилось посчитать проблемы с - сеть/сервисы/биржа. Попробуйте ещё раз через минуту."
+            "Сейчас не получилось посчитать. Проблемы с - сеть/сервисы/биржа. Попробуйте ещё раз через минуту."
         )
         return await show_portfolio_selection(update, context)
 
