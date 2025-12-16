@@ -1,6 +1,7 @@
 import logging
 
 import apimoex
+import asyncio
 import pandas as pd
 import requests
 from telegram import Update, ReplyKeyboardMarkup
@@ -23,8 +24,7 @@ pd.options.display.width = 1200
 # @QcmStockRusBot, @QcmTestBot
 TELEGRAM_TOKEN = settings.bot_calc_test_token
 
-SELECT_PORTFOLIO, CALCULATE = range(2)
-SHOW_PORTFOLIO = range(3)
+SELECT_PORTFOLIO, CALCULATE, SHOW_PORTFOLIO = range(3)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -47,9 +47,16 @@ def get_ports():
     return reliable_port, reliable_hedge_port
 
 
-def get_data_by_ISSClient(url: str, query: dict) -> pd.DataFrame:
+def get_data_by_ISSClient(url: str, query: dict, timeout=(3.05, 30)) -> pd.DataFrame:
     cur_data = []
     with requests.Session() as s:
+
+        _orig_request = s.request
+        def _request(method, url, **kwargs):
+            kwargs.setdefault("timeout", timeout)
+            return _orig_request(method, url, **kwargs)
+        s.request = _request
+
         client = apimoex.ISSClient(s, url, query)
         data = client.get()  # get(), get_all()
 
@@ -97,7 +104,7 @@ def get_current_stocks_data(sec_list: pd.Series) -> pd.DataFrame:
     return total_prices
 
 
-def optimize_weights(cur_port: pd.DataFrame, capital: float):
+def optimize_weights(cur_port: pd.DataFrame, capital: float, timeout=(3.05, 30)):
     offer_na = sum(cur_port["OFFER"].isna())
     last_na = sum(cur_port["LAST"].isna())
     market_na = sum(cur_port["MARKETPRICE"].isna())
@@ -121,7 +128,7 @@ def optimize_weights(cur_port: pd.DataFrame, capital: float):
 
     url = "https://api.portfoliooptimizer.io/v1"
     req = "/portfolio/construction/investable"
-    answ = requests.post(url + req, json=shares_prices)
+    answ = requests.post(url + req, json=shares_prices, timeout=timeout)
 
     cur_port["shares_quantity"] = answ.json()["assetsPositions"]
     cur_port["true_weight"] = answ.json()["assetsWeights"]
@@ -143,17 +150,11 @@ def calc_port(capital: float, port: dict):
 
 
 # Bot Func ------------------------------------------------------------------------------------------------------------
-async def check_subscription(user_id: int) -> bool:
-    CHAT_ID = "-1002471577619"
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getChatMember"
-    params = {"chat_id": CHAT_ID, "user_id": user_id}
-    response = requests.get(url, params=params).json()
-    print(response)
-    if response.get("ok"):
-        status = response["result"].get("status")
-        return status in ["member", "administrator", "creator"]
-    else:
-        return False
+async def check_subscription(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    CHAT_ID = -1002471577619
+    member = await context.bot.get_chat_member(chat_id=CHAT_ID, user_id=user_id)
+    print(member)
+    return member.status in ("member", "administrator", "creator")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -198,7 +199,7 @@ async def show_portfolio_selection(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_portfolio_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if not await check_subscription(user_id):
+    if not await check_subscription(user_id, context):
         await update.message.reply_text(
             "Вы не подписаны на канал 'Моя стратегия РФ'. " "Просьба связаться с @emfmanager_bot"
         )
@@ -231,11 +232,10 @@ async def handle_portfolio_selection(update: Update, context: ContextTypes.DEFAU
 
 async def start_calc_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        user_input = update.message.text
-        capital = float(user_input)
+        capital = float(update.message.text)
         selected_port = context.user_data.get("portfolio")
 
-        cur_port = calc_port(capital, selected_port)
+        cur_port = await asyncio.to_thread(calc_port, capital, selected_port)
 
         response = []
         if cur_port["OFFER"].isna().sum() > 0:
