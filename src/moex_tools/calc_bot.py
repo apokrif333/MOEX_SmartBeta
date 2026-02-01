@@ -1,21 +1,20 @@
 import asyncio
 import io
 import logging
-import random
 import time
 from logging.handlers import TimedRotatingFileHandler
 
 import apimoex
 import pandas as pd
 import requests
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    MessageHandler,
-    filters,
     ContextTypes,
     ConversationHandler,
+    MessageHandler,
+    filters,
 )
 
 from moex_tools.config import settings
@@ -72,9 +71,11 @@ def get_data_by_ISSClient(url: str, query: dict, timeout=(3, 4)) -> pd.DataFrame
     with requests.Session() as s:
 
         _orig_request = s.request
+
         def _request(method, url, **kwargs):
             kwargs.setdefault("timeout", timeout)
             return _orig_request(method, url, **kwargs)
+
         s.request = _request
 
         client = apimoex.ISSClient(s, url, query)
@@ -235,7 +236,7 @@ async def handle_portfolio_selection(update: Update, context: ContextTypes.DEFAU
     if user_choice == "Перезапустить":
         return await start(update, context)
 
-    reliable_port, reliable_hedge_port = context.bot_data["ports"]
+    reliable_port, reliable_hedge_port = get_ports()
 
     user_choice = update.message.text
     if user_choice == "Высоконадёжный портфель":
@@ -262,8 +263,7 @@ async def start_calc_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
         selected_port = context.user_data.get("portfolio")
 
         cur_port = await asyncio.wait_for(
-            asyncio.to_thread(calc_port, capital, selected_port),
-            timeout=30
+            asyncio.to_thread(calc_port, capital, selected_port), timeout=30
         )
 
         response = []
@@ -320,8 +320,6 @@ def iss_get_with_retries(client, start=None, retries=3):
 
 
 def main():
-    reliable_port, reliable_hedge_port = get_ports()
-
     application = (
         ApplicationBuilder()
         .token(TELEGRAM_TOKEN)
@@ -349,7 +347,6 @@ def main():
     application.add_error_handler(on_error)
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("disclaimer", disclaimer))
-    application.bot_data["ports"] = (reliable_port, reliable_hedge_port)
 
     logger.info("Бот запущен")
     application.run_polling(timeout=50, bootstrap_retries=5)

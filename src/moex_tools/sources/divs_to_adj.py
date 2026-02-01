@@ -1,5 +1,4 @@
 import polars as pl
-
 from moex_tools.config import settings
 
 
@@ -49,7 +48,7 @@ def prepare_files():
     )
     fm_pl = fm_pl.group_by(["exdiv_date", "ticker"]).agg(pl.col("size").sum())
 
-    path = r"G:\Market\moex-equity\data\intermediate\union_raw_moex_descript_split.parquet"
+    path = settings.data_dir / "intermediate" / "union_raw_moex_descript_split.parquet"
     df = pl.read_parquet(path).with_columns(pl.col("DATE").cast(pl.Date))
 
     dfs = {"base": df, "bcs": bcs_pl, "tink": tink_pl, "fm": fm_pl}
