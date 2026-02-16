@@ -1,0 +1,166 @@
+2025-12-16 03:41:27,553 - __main__ - INFO - calc_bot: logging initialized
+2025-12-16 03:41:29,686 - telegram.ext.Application - INFO - Application started
+2025-12-16 03:41:50,630 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 03:41:53,296 - __main__ - INFO -    ticker    weight UPDATETIME SECID BOARDID         LAST         BID       OFFER  MARKETPRICE
+0    AKRN  0.058602   11:26:46  AKRN    TQBR  17920.00000  17918.0000  17948.0000   17882.0000
+1    SBER  0.037241   11:26:47  SBER    TQBR    305.59000    305.5900    305.6000     304.1900
+2    IRAO  0.036704   11:26:46  IRAO    TQBR      3.11900      3.1185      3.1190       3.1020
+3    NKNC  0.033792   11:26:47  NKNC    TQBR     81.50000     81.4000     81.5000      81.2000
+4    PHOR  0.032777   11:26:46  PHOR    TQBR   6471.00000   6469.0000   6470.0000    6423.0000
+5    MOEX  0.031974   11:26:46  MOEX    TQBR    179.91000    179.8900    179.9000     177.9300
+6    SIBN  0.031202   11:26:44  SIBN    TQBR    499.90000    499.8500    499.9000     495.5500
+7    MTSS  0.030471   11:26:47  MTSS    TQBR    218.70000    218.7000    218.8500     217.5000
+8    BSPB  0.030324   11:26:47  BSPB    TQBR    310.00000    310.0000    310.0100     317.9800
+9    KAZT  0.030163   11:26:00  KAZT    TQBR    429.80000    429.8000    430.0000     429.0000
+10   MDMG  0.030014   11:26:47  MDMG    TQBR   1410.20000   1410.0000   1410.2000    1398.9000
+11   GCHE  0.029983   11:26:47  GCHE    TQBR   3456.00000   3448.0000   3455.0000    3451.0000
+12   ELMT  0.029563   11:26:43  ELMT    TQBR      0.11905      0.1186      0.1190       0.1195
+13   LKOH  0.028890   11:26:47  LKOH    TQBR   5714.00000   5713.0000   5714.0000    5687.0000
+14   ROSN  0.028300   11:26:47  ROSN    TQBR    411.95000    411.9500    412.0000     407.2000
+15   BOND  0.300000   11:26:47  BOND    TQTF   1520.40000   1516.2000   1522.8000    1519.2000
+16   GOLD  0.200000   11:26:47  GOLD    TQTF      2.70150      2.7005      2.7015       2.7195
+2025-12-16 03:41:55,022 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 03:41:57,409 - __main__ - INFO -    ticker    weight UPDATETIME SECID BOARDID         LAST         BID      OFFER  MARKETPRICE
+0    AKRN  0.117204   11:26:46  AKRN    TQBR  17920.00000  17918.0000  17948.000   17882.0000
+1    SBER  0.074483   11:26:47  SBER    TQBR    305.59000    305.5900    305.600     304.1900
+2    IRAO  0.073408   11:26:46  IRAO    TQBR      3.11900      3.1185      3.119       3.1020
+3    NKNC  0.067584   11:26:47  NKNC    TQBR     81.50000     81.4000     81.500      81.2000
+4    PHOR  0.065555   11:26:46  PHOR    TQBR   6471.00000   6469.0000   6470.000    6423.0000
+5    MOEX  0.063948   11:26:46  MOEX    TQBR    179.91000    179.8900    179.900     177.9300
+6    SIBN  0.062404   11:26:44  SIBN    TQBR    499.90000    499.8500    499.900     495.5500
+7    MTSS  0.060941   11:26:47  MTSS    TQBR    218.70000    218.7000    218.850     217.5000
+8    BSPB  0.060648   11:26:47  BSPB    TQBR    310.00000    310.0000    310.010     317.9800
+9    KAZT  0.060326   11:26:00  KAZT    TQBR    429.80000    429.8000    430.000     429.0000
+10   MDMG  0.060028   11:26:48  MDMG    TQBR   1410.20000   1410.0000   1410.200    1398.9000
+11   GCHE  0.059965   11:26:51  GCHE    TQBR   3456.00000   3449.0000   3454.000    3451.0000
+12   ELMT  0.059126   11:26:43  ELMT    TQBR      0.11905      0.1186      0.119       0.1195
+13   LKOH  0.057780   11:26:51  LKOH    TQBR   5714.00000   5713.0000   5714.000    5687.0000
+14   ROSN  0.056601   11:26:51  ROSN    TQBR    412.00000    411.9500    412.000     407.2000
+2025-12-16 03:41:59,034 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 03:42:18,332 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-12-16 03:42:18,332 - telegram.ext.Application - INFO - Application.stop() complete
+2025-12-16 05:41:20,564 - __main__ - INFO - calc_bot: logging initialized
+2025-12-16 05:41:22,638 - __main__ - INFO - Бот запущен
+2025-12-16 05:41:23,029 - telegram.ext.Application - INFO - Application started
+2025-12-16 05:41:42,933 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 05:41:46,495 - __main__ - INFO - cur_port rows=17 cols=9
+2025-12-16 05:41:49,727 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 05:41:51,799 - __main__ - INFO - cur_port rows=15 cols=9
+2025-12-16 05:41:54,136 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 05:41:58,511 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-12-16 05:41:58,512 - telegram.ext.Application - INFO - Application.stop() complete
+2025-12-16 05:49:57,772 - __main__ - INFO - calc_bot: logging initialized
+2025-12-16 05:49:59,879 - __main__ - INFO - Бот запущен
+2025-12-16 05:50:00,376 - telegram.ext.Application - INFO - Application started
+2025-12-16 05:50:14,416 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 05:50:16,486 - __main__ - INFO - cur_port rows=17 cols=9
+2025-12-16 05:50:18,215 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 05:50:20,161 - __main__ - INFO - cur_port rows=15 cols=9
+2025-12-16 05:50:21,918 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:25:52,431 - __main__ - INFO - calc_bot: logging initialized
+2025-12-16 06:25:54,718 - __main__ - INFO - Бот запущен
+2025-12-16 06:25:55,127 - telegram.ext.Application - INFO - Application started
+2025-12-16 06:26:14,696 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:26:16,655 - __main__ - ERROR - calc failed
+Traceback (most recent call last):
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 266, in start_calc_port
+    cur_port = await asyncio.wait_for(
+  File "C:\Program Files\Python310\lib\asyncio\tasks.py", line 447, in wait_for
+    return fut.result()
+  File "C:\Program Files\Python310\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "C:\Program Files\Python310\lib\concurrent\futures\thread.py", line 52, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 167, in calc_port
+    cur_price = get_current_stocks_data(cur_port["ticker"])
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 121, in get_current_stocks_data
+    cur_df = get_data_by_ISSClient(main_url, query)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 83, in get_data_by_ISSClient
+    data = iss_get_with_retries(client)  # client.get(), get(), get_all()
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 316, in iss_get_with_retries
+    return client.get()
+TypeError: get expected at least 1 argument, got 0
+2025-12-16 06:26:17,782 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:26:19,547 - __main__ - ERROR - calc failed
+Traceback (most recent call last):
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 266, in start_calc_port
+    cur_port = await asyncio.wait_for(
+  File "C:\Program Files\Python310\lib\asyncio\tasks.py", line 447, in wait_for
+    return fut.result()
+  File "C:\Program Files\Python310\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "C:\Program Files\Python310\lib\concurrent\futures\thread.py", line 52, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 167, in calc_port
+    cur_price = get_current_stocks_data(cur_port["ticker"])
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 121, in get_current_stocks_data
+    cur_df = get_data_by_ISSClient(main_url, query)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 83, in get_data_by_ISSClient
+    data = iss_get_with_retries(client)  # client.get(), get(), get_all()
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 316, in iss_get_with_retries
+    return client.get()
+TypeError: get expected at least 1 argument, got 0
+2025-12-16 06:26:20,730 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:30:46,607 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-12-16 06:30:46,608 - telegram.ext.Application - INFO - Application.stop() complete
+2025-12-16 06:30:51,590 - __main__ - INFO - calc_bot: logging initialized
+2025-12-16 06:30:53,545 - __main__ - INFO - Бот запущен
+2025-12-16 06:30:53,937 - telegram.ext.Application - INFO - Application started
+2025-12-16 06:32:39,159 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:32:40,550 - __main__ - ERROR - calc failed
+Traceback (most recent call last):
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 266, in start_calc_port
+    cur_port = await asyncio.wait_for(
+  File "C:\Program Files\Python310\lib\asyncio\tasks.py", line 447, in wait_for
+    return fut.result()
+  File "C:\Program Files\Python310\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "C:\Program Files\Python310\lib\concurrent\futures\thread.py", line 52, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 167, in calc_port
+    cur_price = get_current_stocks_data(cur_port["ticker"])
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 121, in get_current_stocks_data
+    cur_df = get_data_by_ISSClient(main_url, query)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 83, in get_data_by_ISSClient
+    data = iss_get_with_retries(client)  # client.get(), get(), get_all()
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 316, in iss_get_with_retries
+    return client.get()
+TypeError: get expected at least 1 argument, got 0
+2025-12-16 06:32:42,218 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:32:43,678 - __main__ - ERROR - calc failed
+Traceback (most recent call last):
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 266, in start_calc_port
+    cur_port = await asyncio.wait_for(
+  File "C:\Program Files\Python310\lib\asyncio\tasks.py", line 447, in wait_for
+    return fut.result()
+  File "C:\Program Files\Python310\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "C:\Program Files\Python310\lib\concurrent\futures\thread.py", line 52, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 167, in calc_port
+    cur_price = get_current_stocks_data(cur_port["ticker"])
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 121, in get_current_stocks_data
+    cur_df = get_data_by_ISSClient(main_url, query)
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 83, in get_data_by_ISSClient
+    data = iss_get_with_retries(client)  # client.get(), get(), get_all()
+  File "G:\Market\moex-equity\src\moex_tools\calc_bot.py", line 316, in iss_get_with_retries
+    return client.get()
+TypeError: get expected at least 1 argument, got 0
+2025-12-16 06:32:44,627 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:36:17,226 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-12-16 06:36:17,226 - telegram.ext.Application - INFO - Application.stop() complete
+2025-12-16 06:36:22,359 - __main__ - INFO - calc_bot: logging initialized
+2025-12-16 06:36:24,354 - __main__ - INFO - Бот запущен
+2025-12-16 06:36:24,755 - telegram.ext.Application - INFO - Application started
+2025-12-16 06:37:16,265 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:37:18,039 - __main__ - INFO - cur_port rows=17 cols=9
+2025-12-16 06:37:20,685 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 06:37:22,480 - __main__ - INFO - cur_port rows=15 cols=9
+2025-12-16 06:37:24,144 - __main__ - INFO - ChatMemberAdministrator(api_kwargs={'can_manage_voice_chats': True}, can_be_edited=False, can_change_info=True, can_delete_messages=True, can_delete_stories=True, can_edit_messages=True, can_edit_stories=True, can_invite_users=True, can_manage_chat=True, can_manage_direct_messages=True, can_manage_video_chats=True, can_post_messages=True, can_post_stories=True, can_promote_members=False, can_restrict_members=True, is_anonymous=False, status=<ChatMemberStatus.ADMINISTRATOR>, user=User(first_name='Alex.Ash', id=354344891, is_bot=False, language_code='ru', username='aleksei_ash'))
+2025-12-16 07:06:49,550 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-12-16 07:06:49,550 - telegram.ext.Application - INFO - Application.stop() complete
+2025-12-16 07:06:54,171 - __main__ - INFO - calc_bot: logging initialized
+2025-12-16 07:06:56,115 - __main__ - INFO - Бот запущен
+2025-12-16 07:06:56,510 - telegram.ext.Application - INFO - Application started
+2025-12-16 07:10:10,312 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-12-16 07:10:10,312 - telegram.ext.Application - INFO - Application.stop() complete

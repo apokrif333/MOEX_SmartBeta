@@ -17,8 +17,8 @@ if not exist "%VENV_PYTHON%" (
 set "PYTHONIOENCODING=cp1251"
 set "PYTHONPATH=%ROOT%src;%PYTHONPATH%"
 
-::echo ==== [%date% %time%] WAITING for Monday 09:50 MSK ====
-::"%VENV_PYTHON%" -X utf8=0 -m moex_tools.cli wait || exit /b %ERRORLEVEL%
+echo ==== [%date% %time%] WAITING for Monday 09:50 MSK ====
+"%VENV_PYTHON%" -X utf8=0 -m moex_tools.cli wait || exit /b %ERRORLEVEL%
 
 echo ==== [%date% %time%] START: make-clean ====
 "%VENV_PYTHON%" -X utf8=0 -m moex_tools.cli make-clean

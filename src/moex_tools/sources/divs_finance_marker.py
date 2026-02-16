@@ -9,6 +9,7 @@ import pandas as pd
 import polars as pl
 import requests
 import yfinance as yf
+from requests.exceptions import Timeout, ConnectionError
 from anyio import sleep
 from bs4 import BeautifulSoup
 from tqdm import tqdm
@@ -18,15 +19,24 @@ from moex_tools.config import settings
 
 def _fetch_dividend(ticker: str) -> pd.DataFrame | None:
     """Fetch dividend data for a single ticker from FinanceMarker."""
-    main_url = "https://financemarker.ru/stocks/MOEX/{}/dividends/"
+    main_url = f"https://financemarker.ru/stocks/MOEX/{ticker}/dividends/"
     with requests.Session() as s:
         attempt = 0
         while True:
-            answ = s.get(main_url.format(ticker), timeout=10)
+            try:
+                answ = s.get(main_url, timeout=(15, 20))
+            except (Timeout, ConnectionError) as e:
+                attempt += 1
+                if attempt > 5:
+                    print(f"{ticker} error timeout. {main_url}\n{e}")
+                    return None
+                time.sleep(1 * attempt)
+                continue
+
             if answ.status_code == 500:
                 attempt += 1
                 if attempt > 5:
-                    print(f"{ticker} error 500")
+                    print(f"{ticker} error 500. {main_url}")
                     return None
                 time.sleep(1 * attempt)
             else:
