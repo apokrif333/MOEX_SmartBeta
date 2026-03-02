@@ -123,7 +123,7 @@ def save_to_parquet(df: pl.DataFrame, name: str) -> None:
     os.replace(tmp, path)
 
 
-def fetch_exchange_range_parallel(end: str | None = None, start: str | None = None) -> None:
+def fetch_exchange_range_parallel(end: str = None, start: str = None, workers: int = settings.max_workers) -> None:
     """
     Fetches exchange data for a specified date range in parallel.
 
@@ -135,6 +135,7 @@ def fetch_exchange_range_parallel(end: str | None = None, start: str | None = No
                 if not provided.
     :param start: The start date of the range, formatted as a string (YYYYMMDD). Defaults to
                   `settings.moex_data_start` if not provided.
+    :param workers: The number of concurrent workers to use for data fetching. Defaults to 'settings.max_workers'
     :return: None
     """
     if start is None:
@@ -157,8 +158,8 @@ def fetch_exchange_range_parallel(end: str | None = None, start: str | None = No
     dont_exist = set(dates) - set(already_exist) - settings.war_days
     dont_exist = [d for d in dont_exist if datetime.datetime.strptime(d, "%Y%m%d").weekday() < 5]
 
-    print(f"Fetching data from {start} to {end} in parallel {settings.max_workers} workers...")
-    with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
+    print(f"Fetching data from {start} to {end} in parallel {workers} workers...")
+    with ThreadPoolExecutor(max_workers=workers) as executor:
         future_to_date = {executor.submit(fetch_exchange_day, d): d for d in dont_exist}
 
         for future in tqdm(
@@ -209,7 +210,7 @@ def check_loaded_moex_data():
         if len(date_for_load) > 0:
             print(f"Dates to load: {date_for_load}")
             for d in date_for_load:
-                fetch_exchange_range_parallel(end=d, start=d, max_workers=1)
+                fetch_exchange_range_parallel(end=d, start=d, workers=1)
 
 
 def create_union_raw_moex_data():
