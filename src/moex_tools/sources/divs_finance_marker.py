@@ -137,6 +137,7 @@ def fm_currecy_convert(fm_divs: pl.DataFrame) -> pl.DataFrame:
             pl.when(pl.col("size").str.contains("\$")).then(pl.lit('USD'))
             .when(pl.col("size").str.contains("€")).then(pl.lit('EUR'))
             .when(pl.col("size").str.contains("₽")).then(pl.lit('RUB'))
+            .when(pl.col("size").str.contains("0,9")).then(pl.lit('RUB'))
             .otherwise(None)
             .alias("currency"),
             pl.col("size").str.replace(r" ", "")
