@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import requests
+import time
 from tqdm import tqdm
 from pprint import pprint
 
@@ -29,7 +30,17 @@ def bcs_download(isin_for_parsing: list) -> pl.DataFrame:
     div_df = pd.DataFrame()
     with requests.Session() as s:
         for t in tqdm(isin_for_parsing, desc="Fetching dividends from BCS"):
-            answ = s.get(main_url.format(t))
+            for attempt in range(5):
+                try:
+                    answ = s.get(main_url.format(t))
+                    break
+                except requests.exceptions.SSLError as e:
+                    if attempt < 4:
+                        time.sleep(5)
+                    else:
+                        print(f"BCS SSL error for {t}: {e}")
+            else:
+                continue
             if answ.status_code == 404:
                 continue
 
