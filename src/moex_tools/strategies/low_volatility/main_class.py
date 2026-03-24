@@ -582,10 +582,16 @@ class LowVolatilityStrategy:
             show_pd(results_df[['CAGR', 'DD', 'StDev', 'Sharpe']].sort_values(by='Sharpe', ascending=False))
 
         cur_port = results_df[results_df.index == name].iloc[0]
+        save_path = settings.data_dir / "tests" / f'{name}.csv'
         name = (f"{name} CAGR: {cur_port['CAGR'] * 100:.2f}% DD: {cur_port['DD'] * 100:.2f}% "
                 f"StDev: {cur_port['StDev'] * 100:.2f}% Sharpe: {cur_port['Sharpe']:.2f}")
 
         port = cur_port['Data']
+
+        port.index.name = 'date'
+        port['adjClose'] = port['Port'] / port['Port'].iloc[0]
+        port[['adjClose']].to_csv(save_path, index=True)
+
         port['DD'] = 1 - port['Port'] / port['Port'].expanding().max()
         port['MCFTR'] = self.download_moex_indexes('MCFTR')['CLOSE']
         port['MCFTR'] = (port['MCFTR'].pct_change().shift(-1) + 1).cumprod() * self.capital
