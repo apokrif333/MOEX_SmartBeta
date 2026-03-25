@@ -433,6 +433,7 @@ class LowVolatilityStrategy:
         )
 
         results_dict = {}
+        final_trade_date = pd.to_datetime(self._base_df.select(pl.col('DATE').max()).item())
         for assets in tqdm([10, 15, 20, 30], desc="Run backtest"):
             rank_df = (main_rank_df
                 .group_by('DATE').head(assets)
@@ -500,6 +501,9 @@ class LowVolatilityStrategy:
                 # Make Trades
                 trades_df = pd.DataFrame()
                 reb_list = list(port_dict.keys())
+                if reb_list and pd.to_datetime(reb_list[-1]) < final_trade_date:
+                    reb_list.append(final_trade_date.strftime('%Y-%m-%d'))
+
                 for i in range(len(reb_list[:-1])):
                     cur_port = port_dict[reb_list[i]]
 

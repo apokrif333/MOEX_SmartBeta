@@ -42,7 +42,4 @@ def run_weights_for_bcs():
 def run_analyse_backtest():
     strata = LowVolatilityStrategy()
     results_df = strata.analyze_backtests()
-    strata.visualize_backtested_port(results_df, name='2_20_quarterly', show_table=True)
-
-
-run_analyse_backtest()
+    strata.visualize_backtested_port(results_df, name='2_15_weekly', show_table=False)
