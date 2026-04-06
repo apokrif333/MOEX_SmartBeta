@@ -25,7 +25,7 @@ def bcs_download(isin_for_parsing: list) -> pl.DataFrame:
         analysis.
     :rtype: pl.DataFrame
     """
-    main_url = "https://api.bcs.ru/divcalendar/v1/dividend/{}"
+    main_url = "https://be.broker.ru/bcsexpress-partners-gateway/express-divcalendar/api/v2/dividends/{}"
 
     div_df = pd.DataFrame()
     with requests.Session() as s:
@@ -33,6 +33,7 @@ def bcs_download(isin_for_parsing: list) -> pl.DataFrame:
             for attempt in range(5):
                 try:
                     answ = s.get(main_url.format(t))
+                    answ = answ.json()
                     break
                 except requests.exceptions.SSLError as e:
                     if attempt < 4:
@@ -41,27 +42,28 @@ def bcs_download(isin_for_parsing: list) -> pl.DataFrame:
                         print(f"BCS SSL error for {t}: {e}")
             else:
                 continue
-            if answ.status_code == 404:
+            if 'displayOptions' in answ.keys():
                 continue
 
-            answ = answ.json()
             table = pd.DataFrame(
-                data=np.array([answ['id'], answ['company_name'], answ['last_buy_day'],
-                               answ['closing_date'], answ['dividend_value'], answ['close_price'],
-                               answ['yield']]
-                              ).reshape(1, 7),
-                columns=['id', 'company_name', 'last_buy_day', 'closing_date', 'dividend_value', 'close_price', 'yield']
+                data=np.array([
+                    answ['id'], answ['securityName'], answ['exDividendDate'], answ['recordDate'], answ['size'],
+                    answ['closingPrice'], answ['rate'], answ['currency']
+                ]).reshape(1, 8),
+                columns=['id', 'securityName', 'exDividendDate', 'recordDate', 'size', 'closingPrice', 'rate', 'currency']
             )
-            additional_table = pd.DataFrame.from_dict(answ['previous_dividends'])
+            additional_table = pd.DataFrame.from_dict(answ['previousDividends'])
             if len(additional_table) > 0:
+                if 'isActual' in additional_table.columns:
+                    additional_table.drop(columns=['isActual'], inplace=True)
                 table = pd.concat([table, additional_table])
-            table['ISIN'] = answ['isin_code']
-            table['ticker'] = answ['secure_code']
+            table['ISIN'] = answ['isinCode']
+            table['ticker'] = answ['securCode']
 
             div_df = pd.concat([div_df, table])
 
     div_df.columns = ['id', 'Наименование', 'Последний день для покупки акций', 'Дата закрытия реестра',
-                      'Размер дивиденда', 'Цена акции на закрытие', 'Доходность', 'ISIN', 'ticker']
+                      'Размер дивиденда', 'Цена акции на закрытие', 'Доходность', 'Валюта', 'ISIN', 'ticker']
     div_df.drop(labels='id', axis=1, inplace=True)
     div_df['Последний день для покупки акций'] = pd.to_datetime(
         div_df['Последний день для покупки акций'].str.split('T', expand=True)[0]
